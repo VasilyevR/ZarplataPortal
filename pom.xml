@@ -11,8 +11,8 @@
 	<groupId>og.portal</groupId>
 	<artifactId>zarplata</artifactId>
 	<version>1.0.0-RELEASE</version>
-	<name>zarplata</name>
-	<description>Zarplata</description>
+	<name>portal</name>
+	<description>Portal</description>
 	<properties>
 		<java.version>17</java.version>
 	</properties>
@@ -53,6 +53,16 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<url>http://portal.og:8080/manager/text</url>
+					<server>TomcatServer</server>
+					<path>/portal</path>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
