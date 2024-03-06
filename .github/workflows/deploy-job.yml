@@ -7,6 +7,6 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: Clean and compile
-        run: mvn clean compile
+        run: mvn clean compile war:war
       - name: Deploy
         run: mvn tomcat7:deploy
