@@ -1,7 +1,5 @@
 name: Deploy runner
-on:
-  push:
-    branches: ["master"]
+on: [push]
 jobs:
   prepare-environment:
     runs-on: [self-hosted, linux, x64]
