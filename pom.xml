@@ -65,8 +65,10 @@
 				<artifactId>tomcat7-maven-plugin</artifactId>
 				<version>2.2</version>
 				<configuration>
-					<url>http://portal.og:8080/manager/text</url>
+					<url>http://localhost:8080/manager/text</url>
 					<server>TomcatServer</server>
+					<username>deployer</username>
+					<password>deployer</password>
 					<path>/portal</path>
 				</configuration>
 			</plugin>
