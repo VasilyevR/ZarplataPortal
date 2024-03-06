@@ -70,6 +70,7 @@
 					<username>deployer</username>
 					<password>deployer</password>
 					<path>/portal</path>
+					<update>true</update>
 				</configuration>
 			</plugin>
 			<plugin>
