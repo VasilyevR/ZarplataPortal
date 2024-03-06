@@ -1,0 +1,12 @@
+name: Deploy buy runner
+on:
+  push:
+    branches: [ "master", "develop" ]
+jobs:
+  prepare-environment:
+    runs-on: self-hosted
+    steps:
+      - name: Clean and compile
+        run: mvn clean compile
+      - name: Deploy
+        run: mvn tomcat7:deploy
