@@ -4,6 +4,8 @@ jobs:
   prepare-environment:
     runs-on: [self-hosted, linux, x64]
     steps:
+      - name: checkout
+        uses: actions/checkout@v3
       - name: Clean and compile
         run: mvn clean compile
       - name: Deploy
