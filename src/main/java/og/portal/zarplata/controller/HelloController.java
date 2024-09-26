@@ -8,8 +8,8 @@ import java.util.stream.Collectors;
 
 @RestController
 public class HelloController {
-    @GetMapping("/")
-    public String index(final Authentication auth) {
+    @GetMapping("/auth")
+    public String auth(final Authentication auth) {
         return String.format("Hello, %s. You have authorities: %s", auth.getPrincipal(),
                 auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.joining(", ")));
     }
