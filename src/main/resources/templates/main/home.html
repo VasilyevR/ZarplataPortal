@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="layouts :: header"></head>
+<body>
+<div class="container">
+    Hello, <a th:text="${principal}"/>. You have authorities <a th:text="${authorities}"/>
+</div>
+</body>
+</html>
