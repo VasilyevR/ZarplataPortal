@@ -11,13 +11,19 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Enumeration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RemoteIpResolverFilter implements Filter {
+    private static final Logger log = LoggerFactory.getLogger(RemoteIpResolverFilter.class);
     private static final String X_FORWARDED_FOR_HEADER = "X-Forwarded-For";
     private static final String X_REAL_IP_HEADER = "X-Real-IP";
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
+        log.info("RemoteIpResolverFilter initialized.");
     }
 
     @Override
@@ -25,29 +31,37 @@ public class RemoteIpResolverFilter implements Filter {
             throws IOException, ServletException {
 
         HttpServletRequest httpRequest = (HttpServletRequest) request;
+        String originalRemoteAddr = httpRequest.getRemoteAddr();
         String newRemoteAddr = null;
+
+        log.debug("RemoteIpResolverFilter: Original remoteAddr: {}", originalRemoteAddr);
 
         String xRealIp = httpRequest.getHeader(X_REAL_IP_HEADER);
         if (xRealIp != null && !xRealIp.isEmpty()) {
-            newRemoteAddr = xRealIp;
+            newRemoteAddr = xRealIp.split(",")[0].trim();
+            log.debug("RemoteIpResolverFilter: Found {} header: {}", X_REAL_IP_HEADER, newRemoteAddr);
         } else {
             String xForwardedFor = httpRequest.getHeader(X_FORWARDED_FOR_HEADER);
             if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
                 String[] ips = xForwardedFor.split(",");
                 newRemoteAddr = ips[0].trim();
+                log.debug("RemoteIpResolverFilter: Found {} header: {}", X_FORWARDED_FOR_HEADER, newRemoteAddr);
             }
         }
 
         if (newRemoteAddr != null && !newRemoteAddr.equals(httpRequest.getRemoteAddr())) {
+            log.info("RemoteIpResolverFilter: Rewriting remote address from {} to {}", originalRemoteAddr, newRemoteAddr);
             HttpServletRequestWrapper wrappedRequest = new RemoteAddrRequestWrapper(httpRequest, newRemoteAddr);
             chain.doFilter(wrappedRequest, response);
         } else {
+            log.debug("RemoteIpResolverFilter: No change to remote address ({}).", originalRemoteAddr);
             chain.doFilter(request, response);
         }
     }
 
     @Override
     public void destroy() {
+        log.info("RemoteIpResolverFilter destroyed.");
     }
 
     private static class RemoteAddrRequestWrapper extends HttpServletRequestWrapper {
@@ -66,22 +80,6 @@ public class RemoteIpResolverFilter implements Filter {
         @Override
         public String getRemoteHost() {
             return remoteAddr;
-        }
-
-        @Override
-        public Enumeration<String> getHeaders(String name) {
-            if ("x-real-ip".equalsIgnoreCase(name) || "x-forwarded-for".equalsIgnoreCase(name) || "x-forwarded-proto".equalsIgnoreCase(name) || "x-forwarded-port".equalsIgnoreCase(name)) {
-                return Collections.emptyEnumeration();
-            }
-            return super.getHeaders(name);
-        }
-
-        @Override
-        public String getHeader(String name) {
-            if ("x-real-ip".equalsIgnoreCase(name) || "x-forwarded-for".equalsIgnoreCase(name) || "x-forwarded-proto".equalsIgnoreCase(name) || "x-forwarded-port".equalsIgnoreCase(name)) {
-                return null;
-            }
-            return super.getHeader(name);
         }
     }
 }
