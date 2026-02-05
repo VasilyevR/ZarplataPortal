@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Dashboard</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Welcome, <span th:text="${user.login}">User</span></h1>
+
+<h2>Total Salary: <span th:text="${totalSalary}">0.00</span></h2>
+
+<h3>Paid Invoices</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Number</th>
+            <th>Client</th>
+            <th>Date</th>
+            <th>Amount Paid</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="invoice : ${invoices}">
+            <td th:text="${invoice.number}">INV-001</td>
+            <td th:text="${invoice.client != null ? invoice.client.name : ''}">Client Name</td>
+            <td th:text="${invoice.givenDate}">2023-01-01</td>
+            <td th:text="${invoice.givenSum}">100.00</td>
+        </tr>
+    </tbody>
+</table>
+
+</body>
+</html>

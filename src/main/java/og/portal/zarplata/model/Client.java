@@ -2,12 +2,16 @@ package og.portal.zarplata.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
+@ToString
+@NoArgsConstructor
 @Entity
 @Table(name = "client")
 public class Client {

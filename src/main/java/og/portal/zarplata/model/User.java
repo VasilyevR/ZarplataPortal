@@ -2,12 +2,18 @@ package og.portal.zarplata.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
+@ToString
+@NoArgsConstructor
 @Entity
 @Table(name = "user")
 public class User {
@@ -24,6 +30,6 @@ public class User {
     @JoinColumn(name = "user_group_id")
     private UserGroup userGroup;
 
-    public User() {
-    }
+    @Column(name = "percent", precision = 5, scale = 2)
+    private BigDecimal percent;
 }

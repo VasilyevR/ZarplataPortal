@@ -2,14 +2,19 @@ package og.portal.zarplata.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
 @Setter
+@ToString
+@NoArgsConstructor
 @Entity
 @Table(name = "invoice")
 public class Invoice {
@@ -36,7 +41,7 @@ public class Invoice {
 
     @Column(name = "sum", precision = 15, scale = 2)
     @JdbcTypeCode(SqlTypes.DECIMAL)
-    private Double sum;
+    private BigDecimal sum;
 
     @Column(name = "arrival_date")
     @JdbcTypeCode(SqlTypes.DATE)
@@ -52,15 +57,15 @@ public class Invoice {
 
     @Column(name = "given_sum", precision = 15, scale = 2)
     @JdbcTypeCode(SqlTypes.DECIMAL)
-    private Double givenSum;
+    private BigDecimal givenSum;
 
     @Column(name = "purchase_sum", precision = 15, scale = 2)
     @JdbcTypeCode(SqlTypes.DECIMAL)
-    private Double purchaseSum;
+    private BigDecimal purchaseSum;
 
     @Column(name = "calculated_sum", precision = 15, scale = 2)
     @JdbcTypeCode(SqlTypes.DECIMAL)
-    private Double calculatedSum;
+    private BigDecimal calculatedSum;
 
     @Column(name = "documents_status", length = 50)
     @JdbcTypeCode(SqlTypes.VARCHAR)

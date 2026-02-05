@@ -1,5 +1,6 @@
 package og.portal.zarplata.config;
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,5 +29,12 @@ public class SecurityConfig {
                 .addFilterBefore(filter, BasicAuthenticationFilter.class)
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(entryPoint));
         return http.build();
+    }
+
+    @Bean
+    public FilterRegistrationBean<NegotiateSecurityFilter> waffleNegotiateSecurityFilterRegistration(NegotiateSecurityFilter filter) {
+        FilterRegistrationBean<NegotiateSecurityFilter> registrationBean = new FilterRegistrationBean<>(filter);
+        registrationBean.setEnabled(false);
+        return registrationBean;
     }
 }

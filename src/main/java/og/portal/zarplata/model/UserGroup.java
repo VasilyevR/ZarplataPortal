@@ -2,12 +2,16 @@ package og.portal.zarplata.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
+@ToString
+@NoArgsConstructor
 @Entity
 @Table(name = "user_group")
 public class UserGroup {
@@ -19,7 +23,4 @@ public class UserGroup {
     @Column(name = "alias", unique = true, length = 20)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     private String alias;
-
-    public UserGroup() {
-    }
 }
