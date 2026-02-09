@@ -22,12 +22,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ExcelSyncService {
 
-    @Value("${app.salary.folder.path}")
+    @Value("${app.share.folder.path}")
     private String salaryFolderPath;
 
     private final InvoiceRepository invoiceRepository;
 
-    @Scheduled(cron = "0 0 * * * *")
+//    @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void syncSalaries() {
         log.info("Starting salary synchronization from {}", salaryFolderPath);

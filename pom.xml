@@ -12,7 +12,7 @@
 	<groupId>og.portal</groupId>
 	<artifactId>zarplata</artifactId>
 
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 	<version>1.0.0-RELEASE</version>
 	<name>portal</name>
 	<url>http://portal.og</url>
@@ -128,29 +128,7 @@
 	</dependencies>
 
 	<build>
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-enforcer-plugin</artifactId>
-					<configuration>
-						<rules>
-							<enforceBytecodeVersion>
-								<excludes>
-									<exclude>org.apache.tomcat.embed:tomcat-embed-core</exclude>
-								</excludes>
-							</enforceBytecodeVersion>
-						</rules>
-					</configuration>
-				</plugin>
-			</plugins>
-		</pluginManagement>
 		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-war-plugin</artifactId>
-				<version>3.4.0</version>
-			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

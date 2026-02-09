@@ -3,21 +3,17 @@ package og.portal.zarplata.filter;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Enumeration;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+@Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RemoteIpResolverFilter implements Filter {
-    private static final Logger log = LoggerFactory.getLogger(RemoteIpResolverFilter.class);
     private static final String X_FORWARDED_FOR_HEADER = "X-Forwarded-For";
     private static final String X_REAL_IP_HEADER = "X-Real-IP";
 
@@ -31,6 +27,11 @@ public class RemoteIpResolverFilter implements Filter {
             throws IOException, ServletException {
 
         HttpServletRequest httpRequest = (HttpServletRequest) request;
+        String requestURI = httpRequest.getRequestURI();
+        String contextPath = httpRequest.getContextPath();
+        
+        log.info("RemoteIpResolverFilter: Received request for URI: '{}', ContextPath: '{}'", requestURI, contextPath);
+
         String originalRemoteAddr = httpRequest.getRemoteAddr();
         String newRemoteAddr = null;
 
