@@ -1,12 +1,55 @@
-name: Deploy runner
-on: [push]
+name: Build and Deploy to Windows Server
+
+on:
+  push:
+    branches: [ master ]
+
 jobs:
-  prepare-environment:
-    runs-on: [self-hosted, linux, x64]
+  build:
+    runs-on: ubuntu-latest
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
-      - name: Clean and compile
-        run: mvn clean compile war:war
-      - name: Deploy
-        run: mvn tomcat7:deploy
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zarplata-portal-jar
+          path: target/zarplata-*.jar
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, windows, x64]
+    env:
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+      SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: zarplata-portal-jar
+          path: ${{ env.DEPLOY_PATH }}/temp
+
+      - name: Stop Service
+        shell: cmd
+        run: |
+          net stop "%SERVICE_NAME%" || echo Service not running
+          
+      - name: Replace JAR
+        shell: powershell
+        run: |
+          $deployPath = $env:DEPLOY_PATH
+          Move-Item -Path "$deployPath/temp/zarplata-*.jar" -Destination "$deployPath/zarplata-portal.jar" -Force
+          
+      - name: Start Service
+        shell: cmd
+        run: net start "%SERVICE_NAME%"
