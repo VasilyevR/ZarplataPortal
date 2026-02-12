@@ -1,47 +1,41 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Dashboard</title>
+    <title th:text="#{dashboard.title}">Dashboard</title>
     <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        body {
+            font-family: sans-serif;
+            margin: 2em;
         }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
+        .menu-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
         }
-        th {
-            background-color: #f2f2f2;
+        .menu-item {
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+            background-color: #f9f9f9;
+            transition: background-color 0.3s;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .menu-item:hover {
+            background-color: #e0e0e0;
         }
     </style>
 </head>
 <body>
 
-<h1>Welcome, <span th:text="${user.login}">User</span></h1>
+<h1 th:text="#{welcome.message(${user.login})}">Welcome, User</h1>
 
-<h2>Total Salary: <span th:text="${totalSalary}">0.00</span></h2>
-
-<h3>Paid Invoices</h3>
-<table>
-    <thead>
-        <tr>
-            <th>Number</th>
-            <th>Client</th>
-            <th>Date</th>
-            <th>Amount Paid</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr th:each="invoice : ${invoices}">
-            <td th:text="${invoice.number}">INV-001</td>
-            <td th:text="${invoice.client != null ? invoice.client.name : ''}">Client Name</td>
-            <td th:text="${invoice.givenDate}">2023-01-01</td>
-            <td th:text="${invoice.givenSum}">100.00</td>
-        </tr>
-    </tbody>
-</table>
+<div class="menu-container">
+    <a href="/salary" class="menu-item" th:text="#{menu.salary}">My Salary</a>
+    <a href="/purchase-orders" class="menu-item" th:text="#{menu.purchase.orders}">Purchase Orders</a>
+</div>
 
 </body>
 </html>

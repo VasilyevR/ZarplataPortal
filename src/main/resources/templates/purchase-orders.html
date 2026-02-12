@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title th:text="#{po.title}">Purchase Order Generation</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        table { border-collapse: collapse; margin-bottom: 2em; }
+        th, td { border: 1px solid #ccc; padding: 8px; }
+        th { background-color: #f2f2f2; }
+        .color-cell { width: 100px; }
+        #drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 100%;
+            min-height: 200px;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            color: #777;
+            margin-bottom: 1em;
+        }
+        #drop-area.highlight { border-color: purple; }
+        #file-list { margin-top: 10px; }
+        #file-list div { padding: 5px; background-color: #f9f9f9; border: 1px solid #eee; margin-bottom: 5px; }
+        button { font-size: 1.2em; padding: 10px 20px; cursor: pointer; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            display: none;
+            margin: 10px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<h1 th:text="#{po.title}">Purchase Order Generation</h1>
+<p th:text="#{po.description}">This page allows you to automatically generate order files for suppliers based on uploaded invoices.</p>
+
+<h2 th:text="#{po.settings.title}">Supplier Settings</h2>
+<table>
+    <thead>
+    <tr>
+        <th th:text="#{po.settings.color}">Excel Color</th>
+        <th th:text="#{po.settings.supplier}">Supplier Name</th>
+        <th th:text="#{po.settings.filename}">Order Filename</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="setting : ${supplierSettings}">
+        <td class="color-cell" th:style="${setting.colorHex != null} ? 'background-color: #' + ${#strings.substring(setting.colorHex, 2)} + ';' : ''">
+            <span th:text="${setting.colorName != null ? setting.colorName : #messages.msg('po.settings.default')}"></span>
+        </td>
+        <td th:text="${setting.title}">Supplier Name</td>
+        <td th:text="${setting.fileName}">filename.xlsx</td>
+    </tr>
+    </tbody>
+</table>
+
+<div sec:authorize="isAuthenticated()">
+    <h2 th:text="#{po.upload.title}">Upload Invoices</h2>
+    <p th:text="#{po.upload.desc}">Drag and drop invoice files (.xlsx) here or click to select.</p>
+
+    <div id="drop-area" th:text="#{po.drop.here}">
+        Drop files here
+    </div>
+    <div id="file-list"></div>
+    <input type="file" id="file-input" multiple accept=".xlsx" style="display: none;">
+
+    <div th:if="${canGenerate}">
+        <button id="submit-button" th:text="#{po.button.generate}">Generate</button>
+        <div id="spinner" class="spinner"></div>
+    </div>
+    <div th:unless="${canGenerate}">
+        <p><i th:text="#{po.no.rights}">You do not have permission to generate orders.</i></p>
+    </div>
+</div>
+
+
+<script th:inline="javascript">
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('file-input');
+    const fileListDiv = document.getElementById('file-list');
+    const submitButton = document.getElementById('submit-button');
+    const spinner = document.getElementById('spinner');
+    let fileStore = [];
+
+    const msgSelectedFiles = /*[[#{po.selected.files}]]*/ 'Selected files';
+    const msgAlertSelectFile = /*[[#{po.alert.select.file}]]*/ 'Please select at least one file.';
+    const msgAlertSuccess = /*[[#{po.alert.success}]]*/ 'Files successfully generated and downloaded!';
+    const msgAlertError = /*[[#{po.alert.error}]]*/ 'An error occurred while generating files.';
+
+    dropArea.addEventListener('click', () => fileInput.click());
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.classList.add('highlight'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.classList.remove('highlight'), false);
+    });
+
+    dropArea.addEventListener('drop', handleDrop, false);
+    function handleDrop(e) {
+        handleFiles(e.dataTransfer.files);
+    }
+
+    fileInput.addEventListener('change', function() {
+        handleFiles(this.files);
+    });
+
+    function handleFiles(files) {
+        fileStore = [...fileStore, ...Array.from(files).filter(f => f.name.endsWith('.xlsx'))];
+        renderFileList();
+    }
+
+    function renderFileList() {
+        fileListDiv.innerHTML = '';
+        if (fileStore.length > 0) {
+            fileListDiv.innerHTML = `<strong>${msgSelectedFiles} (${fileStore.length}):</strong>`;
+            fileStore.forEach((file, index) => {
+                const fileDiv = document.createElement('div');
+                fileDiv.textContent = file.name;
+                fileListDiv.appendChild(fileDiv);
+            });
+        }
+    }
+
+    if (submitButton) {
+        submitButton.addEventListener('click', () => {
+            if (fileStore.length === 0) {
+                alert(msgAlertSelectFile);
+                return;
+            }
+
+            submitButton.disabled = true;
+            spinner.style.display = 'block';
+
+            const formData = new FormData();
+            fileStore.forEach(file => {
+                formData.append('files', file);
+            });
+
+            fetch('/purchase-orders/generate', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server error: ' + response.statusText);
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'purchase_orders.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    alert(msgAlertSuccess);
+                    fileStore = [];
+                    renderFileList();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(msgAlertError);
+                })
+                .finally(() => {
+                    submitButton.disabled = false;
+                    spinner.style.display = 'none';
+                });
+        });
+    }
+
+</script>
+
+</body>
+</html>
