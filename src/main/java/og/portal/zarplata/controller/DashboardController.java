@@ -24,13 +24,15 @@ public class DashboardController {
 
         User user = userRepository.findByLogin(username).orElse(null);
 
-        if (user == null) {
-            log.error("DashboardController: User '{}' not found in database.", username);
-            model.addAttribute("error", "User not found in database.");
-            return "error";
+        if (user != null) {
+            model.addAttribute("user", user);
+        } else {
+            User tempUser = new User();
+            tempUser.setLogin(username);
+            model.addAttribute("user", tempUser);
+            log.info("DashboardController: User '{}' not in DB, proceeding with AD credentials only.", username);
         }
 
-        model.addAttribute("user", user);
         return "dashboard";
     }
 }

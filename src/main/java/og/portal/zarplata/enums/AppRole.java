@@ -1,4 +1,4 @@
-package og.portal.zarplata.model;
+package og.portal.zarplata.enums;
 
 public enum AppRole {
     ORDER_GENERATOR,

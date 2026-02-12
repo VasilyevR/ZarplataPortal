@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -33,9 +34,15 @@ public class SalaryController {
         User user = userRepository.findByLogin(username).orElse(null);
 
         if (user == null) {
-            log.error("SalaryController: User '{}' not found in database.", username);
-            model.addAttribute("error", "User not found in database.");
-            return "error";
+            log.warn("SalaryController: User '{}' not found in database. Showing empty salary page.", username);
+            User tempUser = new User();
+            tempUser.setLogin(username);
+            
+            model.addAttribute("user", tempUser);
+            model.addAttribute("invoices", Collections.emptyList());
+            model.addAttribute("totalSalary", BigDecimal.ZERO);
+            model.addAttribute("dataMissing", true);
+            return "salary";
         }
 
         List<Invoice> invoices = invoiceRepository.findByUser(user);
@@ -53,6 +60,7 @@ public class SalaryController {
         model.addAttribute("user", user);
         model.addAttribute("invoices", invoices);
         model.addAttribute("totalSalary", totalSalary);
+        model.addAttribute("dataMissing", false);
 
         return "salary";
     }

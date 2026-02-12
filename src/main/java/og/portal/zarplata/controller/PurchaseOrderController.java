@@ -1,7 +1,7 @@
 package og.portal.zarplata.controller;
 
 import lombok.RequiredArgsConstructor;
-import og.portal.zarplata.model.AppRole;
+import og.portal.zarplata.enums.AppRole;
 import og.portal.zarplata.model.SupplierSetting;
 import og.portal.zarplata.repository.SupplierSettingRepository;
 import og.portal.zarplata.service.PurchaseOrderService;

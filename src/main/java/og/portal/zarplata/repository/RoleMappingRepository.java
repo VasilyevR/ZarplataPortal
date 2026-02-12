@@ -1,6 +1,6 @@
 package og.portal.zarplata.repository;
 
-import og.portal.zarplata.model.AppRole;
+import og.portal.zarplata.enums.AppRole;
 import og.portal.zarplata.model.RoleMapping;
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -2,7 +2,7 @@ package og.portal.zarplata.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import og.portal.zarplata.model.AppRole;
+import og.portal.zarplata.enums.AppRole;
 import og.portal.zarplata.model.GlobalSetting;
 import og.portal.zarplata.model.RoleMapping;
 import og.portal.zarplata.repository.GlobalSettingRepository;
