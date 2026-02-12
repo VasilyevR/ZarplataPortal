@@ -25,9 +25,13 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(final HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(requests -> requests.anyRequest().authenticated())
-                .addFilterBefore(filter, BasicAuthenticationFilter.class)
-                .exceptionHandling(handling -> handling.authenticationEntryPoint(entryPoint));
+        http
+            .authorizeHttpRequests(requests -> requests
+                .requestMatchers("/error").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(filter, BasicAuthenticationFilter.class)
+            .exceptionHandling(handling -> handling.authenticationEntryPoint(entryPoint));
         return http.build();
     }
 

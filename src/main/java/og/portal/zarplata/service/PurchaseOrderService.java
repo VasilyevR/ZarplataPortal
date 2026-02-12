@@ -70,9 +70,13 @@ public class PurchaseOrderService {
 
                     if (color instanceof XSSFColor) {
                         String argbHex = ((XSSFColor) color).getARGBHex();
+                        log.info("Row {}: Found color ARGB HEX: {}", i + 1, argbHex);
+                        
                         if (argbHex != null && supplierByColor.containsKey(argbHex)) {
                             currentSupplier = supplierByColor.get(argbHex);
                         }
+                    } else {
+                         log.info("Row {}: No XSSFColor found (likely default/no fill).", i + 1);
                     }
 
                     aggregatedData.computeIfAbsent(currentSupplier, k -> new HashMap<>())
