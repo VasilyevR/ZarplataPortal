@@ -38,8 +38,12 @@ public class SecurityService {
     public boolean hasRole(AppRole role) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
+            log.debug("Authentication is {} and authenticated is {}",
+                    authentication == null, authentication == null || !authentication.isAuthenticated());
             return false;
         }
+        log.debug("User {} has authorities: {}",
+                authentication.getName(), authentication.getAuthorities());
 
         String domainName = globalSettingRepository.findById(KEY_DOMAIN_NAME)
                 .map(GlobalSetting::getValue)
