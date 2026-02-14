@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -55,13 +56,16 @@ public class PurchaseOrderService {
 
                     Cell articleCell = row.getCell(parseSetting.getArticleCol());
                     Cell quantityCell = row.getCell(parseSetting.getQuantityCol());
+                    Optional<Cell> supplierArticleCell = Optional.ofNullable(row.getCell(parseSetting.getSupplierArticleCol()));
 
                     if (articleCell == null || articleCell.getCellType() == CellType.BLANK) {
                         log.info("Found empty article cell at row {}, stopping processing for file {}", i + 1, file.getOriginalFilename());
                         break;
                     }
 
-                    String article = getCellStringValue(articleCell);
+                    String article = supplierArticleCell.isPresent()
+                            ? getCellStringValue(supplierArticleCell.get())
+                            : getCellStringValue(articleCell);
                     int quantity = (int) quantityCell.getNumericCellValue();
 
                     CellStyle style = articleCell.getCellStyle();
