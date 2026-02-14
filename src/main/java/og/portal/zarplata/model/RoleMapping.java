@@ -19,7 +19,7 @@ public class RoleMapping {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "app_role", nullable = false, unique = true)
+    @Column(name = "app_role", nullable = false)
     private AppRole appRole;
 
     @Column(name = "ad_group_name", nullable = false)
