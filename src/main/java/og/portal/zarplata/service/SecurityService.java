@@ -17,11 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service("securityService")
 @RequiredArgsConstructor
 public class SecurityService {
+    private static final String ROLE_PREFIX = "ROLE_";
+    private static final String KEY_DOMAIN_NAME = "DOMAIN_NAME";
 
     private final GlobalSettingRepository globalSettingRepository;
     private final RoleMappingRepository roleMappingRepository;
-
-    private static final String KEY_DOMAIN_NAME = "DOMAIN_NAME";
 
     @Transactional(readOnly = true)
     public boolean hasRole(String roleName) {
@@ -38,12 +38,9 @@ public class SecurityService {
     public boolean hasRole(AppRole role) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            log.debug("Authentication is {} and authenticated is {}",
-                    authentication == null, authentication == null || !authentication.isAuthenticated());
+            log.debug("SecurityService: User is not authenticated.");
             return false;
         }
-        log.debug("User {} has authorities: {}",
-                authentication.getName(), authentication.getAuthorities());
 
         String domainName = globalSettingRepository.findById(KEY_DOMAIN_NAME)
                 .map(GlobalSetting::getValue)
@@ -54,18 +51,24 @@ public class SecurityService {
                 .orElse(null);
 
         if (adGroup == null) {
-            log.warn("No AD group mapping found for role: {}", role);
+            log.warn("SecurityService: No AD group mapping found for role: {}", role);
             return false;
         }
 
         String expectedAuthority = getAuthority(domainName, adGroup);
-        
+        String expectedAuthorityNoRole = domainName.toUpperCase() + "\\" + adGroup;
+
         boolean hasAuthority = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(a -> a.equalsIgnoreCase(expectedAuthority) || a.equalsIgnoreCase(expectedAuthority.replace("ROLE_", "")));
+                .anyMatch(a -> a.equalsIgnoreCase(expectedAuthority)
+                        || a.equalsIgnoreCase(expectedAuthority.replace(ROLE_PREFIX, ""))
+                        || a.equalsIgnoreCase(expectedAuthorityNoRole)
+                );
 
-        if (!hasAuthority) {
-            log.debug("User {} does not have authority {}. User authorities: {}", 
+        if (hasAuthority) {
+            log.info("SecurityService: ACCESS GRANTED. User '{}' has the required authority.", authentication.getName());
+        } else {
+            log.warn("SecurityService: ACCESS DENIED. User '{}' does NOT have authority '{}'. User authorities: {}", 
                     authentication.getName(), expectedAuthority, authentication.getAuthorities());
         }
 
@@ -74,7 +77,7 @@ public class SecurityService {
 
     @Transactional(readOnly = true)
     public String getAuthorityForRole(AppRole role) {
-         String domainName = globalSettingRepository.findById(KEY_DOMAIN_NAME)
+        String domainName = globalSettingRepository.findById(KEY_DOMAIN_NAME)
                 .map(GlobalSetting::getValue)
                 .orElseThrow(() -> new IllegalStateException("Global setting 'DOMAIN_NAME' not found"));
 
@@ -88,6 +91,6 @@ public class SecurityService {
     }
 
     private static String getAuthority(String domainName, String adGroup) {
-        return "ROLE_" + domainName.toUpperCase() + "_" + adGroup;
+        return ROLE_PREFIX + domainName.toUpperCase() + "_" + adGroup;
     }
 }
