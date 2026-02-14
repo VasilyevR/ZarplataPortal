@@ -2,6 +2,10 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title th:text="#{po.title}">Purchase Order Generation</title>
+
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
     <style>
         body { font-family: sans-serif; margin: 2em; }
         table { border-collapse: collapse; margin-bottom: 2em; }
@@ -94,6 +98,9 @@
     const msgAlertSuccess = /*[[#{po.alert.success}]]*/ 'Files successfully generated and downloaded!';
     const msgAlertError = /*[[#{po.alert.error}]]*/ 'An error occurred while generating files.';
 
+    const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+    const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
     dropArea.addEventListener('click', () => fileInput.click());
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -156,6 +163,9 @@
 
             fetch('/purchase-orders/generate', {
                 method: 'POST',
+                headers: {
+                    [csrfHeader]: csrfToken
+                },
                 body: formData
             })
                 .then(response => {
