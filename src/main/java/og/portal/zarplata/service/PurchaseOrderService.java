@@ -63,9 +63,9 @@ public class PurchaseOrderService {
                         break;
                     }
 
-                    String article = supplierArticleCell.isPresent()
-                            ? getCellStringValue(supplierArticleCell.get())
-                            : getCellStringValue(articleCell);
+                    String article = supplierArticleCell
+                            .map(cell -> getDigits(getCellStringValue(cell)))
+                            .orElseGet(() -> getCellStringValue(articleCell));
                     int quantity = (int) quantityCell.getNumericCellValue();
 
                     CellStyle style = articleCell.getCellStyle();
@@ -135,5 +135,12 @@ public class PurchaseOrderService {
             return String.valueOf((long)cell.getNumericCellValue());
         }
         return cell.getStringCellValue();
+    }
+
+    private String getDigits(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replaceAll("\\D", "");
     }
 }
