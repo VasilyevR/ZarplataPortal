@@ -59,14 +59,15 @@ public class SecurityService {
         }
 
         for (String adGroup : adGroups) {
-            String expectedAuthority = getAuthority(domainName, adGroup);
-            String expectedAuthorityNoRole = domainName.toUpperCase() + "\\" + adGroup;
+            String expectedAuthority = getAuthority(domainName, adGroup).toUpperCase();
+            String expectedAuthorityNoRole = (domainName + "\\" + adGroup).toUpperCase();
 
             boolean hasAuthority = authentication.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
-                    .anyMatch(a -> a.equalsIgnoreCase(expectedAuthority)
-                            || a.equalsIgnoreCase(expectedAuthority.replace(ROLE_PREFIX, ""))
-                            || a.equalsIgnoreCase(expectedAuthorityNoRole)
+                    .map(String::toUpperCase)
+                    .anyMatch(a -> a.equals(expectedAuthority)
+                            || a.equals(expectedAuthority.replace(ROLE_PREFIX, ""))
+                            || a.equals(expectedAuthorityNoRole)
                     );
 
             if (hasAuthority) {
@@ -82,6 +83,6 @@ public class SecurityService {
     }
 
     private static String getAuthority(String domainName, String adGroup) {
-        return ROLE_PREFIX + domainName.toUpperCase() + "_" + adGroup;
+        return ROLE_PREFIX + domainName + "_" + adGroup;
     }
 }
