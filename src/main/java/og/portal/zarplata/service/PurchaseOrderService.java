@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -31,16 +33,10 @@ public class PurchaseOrderService {
     private final InvoiceParseSettingRepository invoiceParseSettingRepository;
 
     public byte[] generatePurchaseOrders(MultipartFile[] files) throws IOException {
-        List<SupplierSetting> allSuppliers = supplierSettingRepository.findAll();
         InvoiceParseSetting parseSetting = invoiceParseSettingRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException("Invoice parsing settings not found in DB"));
 
-        Map<String, SupplierSetting> supplierByColor = new HashMap<>();
-        for (SupplierSetting s : allSuppliers) {
-            if (s.getColorHex() != null) {
-                supplierByColor.put(s.getColorHex(), s);
-            }
-        }
+        Map<String, SupplierSetting> supplierByColor = getSuppliers();
         SupplierSetting defaultSupplier = supplierSettingRepository.findByColorHexIsNull()
                 .orElseThrow(() -> new IllegalStateException("Default supplier (no color) not found"));
 
@@ -55,33 +51,17 @@ public class PurchaseOrderService {
                     if (row == null) continue;
 
                     Cell articleCell = row.getCell(parseSetting.getArticleCol());
-                    Cell quantityCell = row.getCell(parseSetting.getQuantityCol());
-                    Optional<Cell> supplierArticleCell = Optional.ofNullable(row.getCell(parseSetting.getSupplierArticleCol()));
 
-                    if (articleCell == null || articleCell.getCellType() == CellType.BLANK) {
+                    if (isInvoiceEnded(articleCell)) {
                         log.info("Found empty article cell at row {}, stopping processing for file {}", i + 1, file.getOriginalFilename());
                         break;
                     }
 
-                    String article = supplierArticleCell
-                            .map(cell -> getDigits(getCellStringValue(cell)))
-                            .orElseGet(() -> getCellStringValue(articleCell));
-                    int quantity = (int) quantityCell.getNumericCellValue();
+                    String article = getArticle(row, articleCell, parseSetting);
 
-                    CellStyle style = articleCell.getCellStyle();
-                    Color color = style.getFillForegroundColorColor();
-                    SupplierSetting currentSupplier = defaultSupplier;
+                    int quantity = getQuantity(row, parseSetting);
 
-                    if (color instanceof XSSFColor) {
-                        String argbHex = ((XSSFColor) color).getARGBHex();
-                        log.info("Row {}: Found color ARGB HEX: {}", i + 1, argbHex);
-                        
-                        if (argbHex != null && supplierByColor.containsKey(argbHex)) {
-                            currentSupplier = supplierByColor.get(argbHex);
-                        }
-                    } else {
-                         log.info("Row {}: No XSSFColor found (likely default/no fill).", i + 1);
-                    }
+                    SupplierSetting currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor);
 
                     aggregatedData.computeIfAbsent(currentSupplier, k -> new HashMap<>())
                             .merge(article, quantity, Integer::sum);
@@ -90,6 +70,66 @@ public class PurchaseOrderService {
         }
 
         return createZipArchive(aggregatedData);
+    }
+
+    private Map<String, SupplierSetting> getSuppliers() {
+        List<SupplierSetting> allSuppliers = supplierSettingRepository.findAll();
+        Map<String, SupplierSetting> supplierByColor = new HashMap<>();
+        for (SupplierSetting s : allSuppliers) {
+            if (s.getColorHex() != null) {
+                supplierByColor.put(s.getColorHex(), s);
+            }
+        }
+        return supplierByColor;
+    }
+
+    private static boolean isInvoiceEnded(Cell articleCell) {
+        return articleCell == null || articleCell.getCellType() == CellType.BLANK;
+    }
+
+    private int getQuantity(Row row, InvoiceParseSetting parseSetting) {
+        Cell quantityCell = row.getCell(parseSetting.getQuantityCol());
+
+        if (quantityCell.getCellType() == CellType.NUMERIC) {
+            return (int) quantityCell.getNumericCellValue();
+        } else if (quantityCell.getCellType() == CellType.STRING) {
+            String val = getLastDigits(quantityCell.getStringCellValue());
+            if (!val.isEmpty()) {
+                try {
+                    return Integer.parseInt(val);
+                } catch (NumberFormatException e) {
+                    log.warn("Failed to parse quantity from string: {}", quantityCell.getStringCellValue());
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    private String getArticle(Row row, Cell articleCell, InvoiceParseSetting parseSetting) {
+        Optional<Cell> supplierArticleCell = Optional.ofNullable(row.getCell(parseSetting.getSupplierArticleCol()));
+
+        return supplierArticleCell
+                .map(cell -> getDigits(getCellStringValue(cell)))
+                .orElseGet(() -> getCellStringValue(articleCell));
+    }
+
+    private static SupplierSetting getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor) {
+        CellStyle style = articleCell.getCellStyle();
+        Color color = style.getFillForegroundColorColor();
+        SupplierSetting currentSupplier = defaultSupplier;
+
+        if (color instanceof XSSFColor) {
+            String argbHex = ((XSSFColor) color).getARGBHex();
+            log.info("Row {}: Found color ARGB HEX: {}", i + 1, argbHex);
+            
+            if (argbHex != null && supplierByColor.containsKey(argbHex)) {
+                currentSupplier = supplierByColor.get(argbHex);
+            }
+        } else {
+             log.info("Row {}: No XSSFColor found (likely default/no fill).", i + 1);
+        }
+        return currentSupplier;
     }
 
     private byte[] createZipArchive(Map<SupplierSetting, Map<String, Integer>> aggregatedData) throws IOException {
@@ -135,6 +175,21 @@ public class PurchaseOrderService {
             return String.valueOf((long)cell.getNumericCellValue());
         }
         return cell.getStringCellValue();
+    }
+
+    private String getLastDigits(String text) {
+        if (text == null) {
+            return "";
+        }
+        Pattern pattern = Pattern.compile("\\d+");
+        Matcher matcher = pattern.matcher(text);
+        
+        String lastMatch = "";
+        while (matcher.find()) {
+            lastMatch = matcher.group();
+        }
+        
+        return lastMatch;
     }
 
     private String getDigits(String text) {
