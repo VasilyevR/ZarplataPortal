@@ -38,6 +38,28 @@
             margin: 10px auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #result-area {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #4CAF50;
+            background-color: #f0fff0;
+            border-radius: 5px;
+            display: none;
+        }
+        #result-area h3 { margin-top: 0; color: #2E7D32; }
+        #result-area ul { list-style-type: none; padding: 0; }
+        #result-area li { margin-bottom: 10px; }
+        #result-area a {
+            display: inline-block;
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        #result-area a:hover { background-color: #45a049; }
     </style>
 </head>
 <body>
@@ -82,6 +104,11 @@
     <div th:unless="${canGenerate}">
         <p><i th:text="#{po.no.rights}">You do not have permission to generate orders.</i></p>
     </div>
+
+    <div id="result-area">
+        <h3 th:text="#{po.alert.success}">Files successfully generated!</h3>
+        <ul id="generated-files-list"></ul>
+    </div>
 </div>
 
 
@@ -91,11 +118,12 @@
     const fileListDiv = document.getElementById('file-list');
     const submitButton = document.getElementById('submit-button');
     const spinner = document.getElementById('spinner');
+    const resultArea = document.getElementById('result-area');
+    const generatedFilesList = document.getElementById('generated-files-list');
     let fileStore = [];
 
     const msgSelectedFiles = /*[[#{po.selected.files}]]*/ 'Selected files';
     const msgAlertSelectFile = /*[[#{po.alert.select.file}]]*/ 'Please select at least one file.';
-    const msgAlertSuccess = /*[[#{po.alert.success}]]*/ 'Files successfully generated and downloaded!';
     const msgAlertError = /*[[#{po.alert.error}]]*/ 'An error occurred while generating files.';
 
     const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
@@ -132,6 +160,7 @@
     function handleFiles(files) {
         fileStore = [...fileStore, ...Array.from(files).filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.xls'))];
         renderFileList();
+        resultArea.style.display = 'none';
     }
 
     function renderFileList() {
@@ -155,6 +184,8 @@
 
             submitButton.disabled = true;
             spinner.style.display = 'block';
+            resultArea.style.display = 'none';
+            generatedFilesList.innerHTML = '';
 
             const formData = new FormData();
             fileStore.forEach(file => {
@@ -172,20 +203,26 @@
                     if (!response.ok) {
                         throw new Error('Server error: ' + response.statusText);
                     }
-                    return response.blob();
+                    return response.json();
                 })
-                .then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = 'purchase_orders.zip';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    alert(msgAlertSuccess);
-                    fileStore = [];
-                    renderFileList();
+                .then(fileNames => {
+                    if (fileNames && fileNames.length > 0) {
+                        fileNames.forEach((fileName, index) => {
+                            const li = document.createElement('li');
+                            const a = document.createElement('a');
+                            a.href = `/purchase-orders/download/${index}`;
+                            a.textContent = `Download ${fileName}`;
+                            a.target = '_blank';
+                            li.appendChild(a);
+                            generatedFilesList.appendChild(li);
+                        });
+                        resultArea.style.display = 'block';
+
+                        fileStore = [];
+                        renderFileList();
+                    } else {
+                        alert("No files were generated. Check if invoices contain valid data.");
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);

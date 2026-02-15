@@ -2,10 +2,12 @@ package og.portal.zarplata.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import og.portal.zarplata.dto.GeneratedFileDTO;
 import og.portal.zarplata.model.InvoiceParseSetting;
 import og.portal.zarplata.model.SupplierSetting;
 import og.portal.zarplata.repository.InvoiceParseSettingRepository;
 import og.portal.zarplata.repository.SupplierSettingRepository;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFColor;
@@ -16,14 +18,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @Service
@@ -35,7 +36,7 @@ public class PurchaseOrderService {
     private final SupplierSettingRepository supplierSettingRepository;
     private final InvoiceParseSettingRepository invoiceParseSettingRepository;
 
-    public byte[] generatePurchaseOrders(MultipartFile[] files) throws IOException {
+    public List<GeneratedFileDTO> generatePurchaseOrders(MultipartFile[] files) throws IOException {
         InvoiceParseSetting parseSetting = invoiceParseSettingRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException("Invoice parsing settings not found in DB"));
 
@@ -60,7 +61,7 @@ public class PurchaseOrderService {
                         break;
                     }
 
-                    if (shouldSkipRow(row, parseSetting)) {
+                    if (shouldSkipRow(row, parseSetting, workbook)) {
                         log.info("Row {}: Item number column has color, skipping.", i + 1);
                         continue;
                     }
@@ -68,7 +69,7 @@ public class PurchaseOrderService {
                     String article = getArticle(row, articleCell, parseSetting);
                     int quantity = getQuantity(row, parseSetting);
 
-                    Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor);
+                    Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor, workbook);
 
                     if (currentSupplier.isPresent()) {
                         aggregatedData.computeIfAbsent(currentSupplier.get(), k -> new HashMap<>())
@@ -78,7 +79,7 @@ public class PurchaseOrderService {
             }
         }
 
-        return createZipArchive(aggregatedData);
+        return createGeneratedFiles(aggregatedData);
     }
 
     private Map<String, SupplierSetting> getSuppliers() {
@@ -96,10 +97,13 @@ public class PurchaseOrderService {
         return articleCell == null || articleCell.getCellType() == CellType.BLANK;
     }
 
-    private static boolean shouldSkipRow(Row row, InvoiceParseSetting parseSetting) {
+    private static boolean shouldSkipRow(Row row, InvoiceParseSetting parseSetting, Workbook workbook) {
         Cell itemNumberCell = row.getCell(parseSetting.getItemNumberCol());
+        if (itemNumberCell == null) {
+            return false;
+        }
 
-        String hexColor = getCellColorHex(itemNumberCell);
+        String hexColor = getCellColorHex(itemNumberCell, workbook);
         
         return hexColor != null && !hexColor.equalsIgnoreCase(WHITE_COLOR);
     }
@@ -136,10 +140,11 @@ public class PurchaseOrderService {
         return getCellStringValue(articleCell);
     }
 
-    private static Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor) {
-        String argbHex = getCellColorHex(articleCell);
+    private static Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor, Workbook workbook) {
+        String argbHex = getCellColorHex(articleCell, workbook);
+        
         if (argbHex == null) {
-            log.info("Row {}: No fill color found. Using default supplier.", i + 1);
+            log.info("Row {}: No fill color. Using default supplier.", i + 1);
             return Optional.of(defaultSupplier);
         }
 
@@ -153,7 +158,7 @@ public class PurchaseOrderService {
         }
     }
 
-    private static String getCellColorHex(Cell cell) {
+    private static String getCellColorHex(Cell cell, Workbook workbook) {
         CellStyle style = cell.getCellStyle();
         Color color = style.getFillForegroundColorColor();
 
@@ -170,6 +175,13 @@ public class PurchaseOrderService {
             short[] triplet = hssfColor.getTriplet();
             if (triplet == null) return null;
             return String.format("FF%02X%02X%02X", triplet[0], triplet[1], triplet[2]).toUpperCase();
+        } else if (workbook instanceof HSSFWorkbook) {
+             short index = style.getFillForegroundColor();
+             HSSFColor hssfColor = ((HSSFWorkbook) workbook).getCustomPalette().getColor(index);
+             if (hssfColor != null) {
+                 short[] triplet = hssfColor.getTriplet();
+                 return String.format("FF%02X%02X%02X", triplet[0], triplet[1], triplet[2]).toUpperCase();
+             }
         }
         
         return null;
@@ -223,22 +235,17 @@ public class PurchaseOrderService {
         }
     }
 
-    private static byte[] createZipArchive(Map<SupplierSetting, Map<String, Integer>> aggregatedData) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-            for (Map.Entry<SupplierSetting, Map<String, Integer>> entry : aggregatedData.entrySet()) {
-                SupplierSetting supplier = entry.getKey();
-                Map<String, Integer> articles = entry.getValue();
+    private List<GeneratedFileDTO> createGeneratedFiles(Map<SupplierSetting, Map<String, Integer>> aggregatedData) throws IOException {
+        List<GeneratedFileDTO> result = new ArrayList<>();
+        for (Map.Entry<SupplierSetting, Map<String, Integer>> entry : aggregatedData.entrySet()) {
+            SupplierSetting supplier = entry.getKey();
+            Map<String, Integer> articles = entry.getValue();
 
-                byte[] excelData = createExcelFile(articles);
-
-                ZipEntry zipEntry = new ZipEntry(supplier.getFileName());
-                zos.putNextEntry(zipEntry);
-                zos.write(excelData);
-                zos.closeEntry();
-                log.info("Added {} to ZIP archive.", supplier.getFileName());
-            }
+            byte[] excelData = createExcelFile(articles);
+            result.add(new GeneratedFileDTO(supplier.getFileName(), excelData));
+            
+            log.info("Generated file: {}", supplier.getFileName());
         }
-        return baos.toByteArray();
+        return result;
     }
 }
