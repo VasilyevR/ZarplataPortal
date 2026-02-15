@@ -61,10 +61,12 @@ public class PurchaseOrderService {
 
                     int quantity = getQuantity(row, parseSetting);
 
-                    SupplierSetting currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor);
+                    Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor);
 
-                    aggregatedData.computeIfAbsent(currentSupplier, k -> new HashMap<>())
-                            .merge(article, quantity, Integer::sum);
+                    if (currentSupplier.isPresent()) {
+                        aggregatedData.computeIfAbsent(currentSupplier.get(), k -> new HashMap<>())
+                                .merge(article, quantity, Integer::sum);
+                    }
                 }
             }
         }
@@ -114,22 +116,30 @@ public class PurchaseOrderService {
                 .orElseGet(() -> getCellStringValue(articleCell));
     }
 
-    private static SupplierSetting getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor) {
+    private static Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor) {
         CellStyle style = articleCell.getCellStyle();
         Color color = style.getFillForegroundColorColor();
-        SupplierSetting currentSupplier = defaultSupplier;
-
-        if (color instanceof XSSFColor) {
-            String argbHex = ((XSSFColor) color).getARGBHex();
-            log.info("Row {}: Found color ARGB HEX: {}", i + 1, argbHex);
-            
-            if (argbHex != null && supplierByColor.containsKey(argbHex)) {
-                currentSupplier = supplierByColor.get(argbHex);
-            }
-        } else {
-             log.info("Row {}: No XSSFColor found (likely default/no fill).", i + 1);
+        
+        if (!(color instanceof XSSFColor)) {
+            log.info("Row {}: No fill color found. Using default supplier.", i + 1);
+            return Optional.of(defaultSupplier);
         }
-        return currentSupplier;
+
+        XSSFColor xssfColor = (XSSFColor) color;
+        if (xssfColor.isAuto() || xssfColor.getARGBHex() == null) {
+             log.info("Row {}: Color is AUTO or NULL. Using default supplier.", i + 1);
+             return Optional.of(defaultSupplier);
+        }
+
+        String argbHex = xssfColor.getARGBHex();
+        log.info("Row {}: Found color ARGB HEX: {}", i + 1, argbHex);
+        
+        if (supplierByColor.containsKey(argbHex)) {
+            return Optional.of(supplierByColor.get(argbHex));
+        } else {
+            log.warn("Row {}: Color {} found but no supplier mapped. Skipping row.", i + 1, argbHex);
+            return Optional.empty();
+        }
     }
 
     private byte[] createZipArchive(Map<SupplierSetting, Map<String, Integer>> aggregatedData) throws IOException {
