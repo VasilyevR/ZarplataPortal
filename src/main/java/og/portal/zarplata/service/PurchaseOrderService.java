@@ -109,11 +109,15 @@ public class PurchaseOrderService {
     }
 
     private String getArticle(Row row, Cell articleCell, InvoiceParseSetting parseSetting) {
-        Optional<Cell> supplierArticleCell = Optional.ofNullable(row.getCell(parseSetting.getSupplierArticleCol()));
+        Cell supplierArticleCell = row.getCell(parseSetting.getSupplierArticleCol());
+        if (supplierArticleCell != null && supplierArticleCell.getCellType() != CellType.BLANK) {
+            String supplierArticle = getDigits(getCellStringValue(supplierArticleCell));
+            if (!supplierArticle.isEmpty()) {
+                return supplierArticle;
+            }
+        }
 
-        return supplierArticleCell
-                .map(cell -> getDigits(getCellStringValue(cell)))
-                .orElseGet(() -> getCellStringValue(articleCell));
+        return getCellStringValue(articleCell);
     }
 
     private static Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor) {
