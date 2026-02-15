@@ -137,7 +137,7 @@ public class PurchaseOrderService {
             }
         }
 
-        return getCellStringValue(articleCell);
+        return trimNonDigits(getCellStringValue(articleCell));
     }
 
     private static Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor, Workbook workbook) {
@@ -214,6 +214,13 @@ public class PurchaseOrderService {
             return "";
         }
         return text.replaceAll("\\D", "");
+    }
+
+    private static String trimNonDigits(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replaceAll("^\\D+|\\D+$", "");
     }
 
     private static byte[] createExcelFile(Map<String, Integer> articles) throws IOException {
