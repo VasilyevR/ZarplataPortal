@@ -25,4 +25,7 @@ public class InvoiceParseSetting {
 
     @Column(name = "supplier_article_col", nullable = false)
     private int supplierArticleCol;
+
+    @Column(name = "item_number_col", nullable = false)
+    private int itemNumberCol;
 }

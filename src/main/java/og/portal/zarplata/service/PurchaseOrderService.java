@@ -6,6 +6,7 @@ import og.portal.zarplata.model.InvoiceParseSetting;
 import og.portal.zarplata.model.SupplierSetting;
 import og.portal.zarplata.repository.InvoiceParseSettingRepository;
 import og.portal.zarplata.repository.SupplierSettingRepository;
+import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -29,6 +30,8 @@ import java.util.zip.ZipOutputStream;
 @RequiredArgsConstructor
 public class PurchaseOrderService {
 
+    private static final String WHITE_COLOR = "FFFFFFFF";
+
     private final SupplierSettingRepository supplierSettingRepository;
     private final InvoiceParseSettingRepository invoiceParseSettingRepository;
 
@@ -37,14 +40,14 @@ public class PurchaseOrderService {
                 .orElseThrow(() -> new IllegalStateException("Invoice parsing settings not found in DB"));
 
         Map<String, SupplierSetting> supplierByColor = getSuppliers();
-        SupplierSetting defaultSupplier = supplierSettingRepository.findByColorHexIsNull()
-                .orElseThrow(() -> new IllegalStateException("Default supplier (no color) not found"));
+        SupplierSetting defaultSupplier = supplierSettingRepository.findByIsDefaultTrue()
+                .orElseThrow(() -> new IllegalStateException("Default supplier (isDefault=true) not found"));
 
         Map<SupplierSetting, Map<String, Integer>> aggregatedData = new HashMap<>();
 
         for (MultipartFile file : files) {
             log.info("Processing file: {}", file.getOriginalFilename());
-            try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+            try (InputStream is = file.getInputStream(); Workbook workbook = WorkbookFactory.create(is)) {
                 Sheet sheet = workbook.getSheetAt(0);
                 for (int i = parseSetting.getStartRow(); i <= sheet.getLastRowNum(); i++) {
                     Row row = sheet.getRow(i);
@@ -57,8 +60,12 @@ public class PurchaseOrderService {
                         break;
                     }
 
-                    String article = getArticle(row, articleCell, parseSetting);
+                    if (shouldSkipRow(row, parseSetting)) {
+                        log.info("Row {}: Item number column has color, skipping.", i + 1);
+                        continue;
+                    }
 
+                    String article = getArticle(row, articleCell, parseSetting);
                     int quantity = getQuantity(row, parseSetting);
 
                     Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor);
@@ -89,8 +96,17 @@ public class PurchaseOrderService {
         return articleCell == null || articleCell.getCellType() == CellType.BLANK;
     }
 
-    private int getQuantity(Row row, InvoiceParseSetting parseSetting) {
+    private static boolean shouldSkipRow(Row row, InvoiceParseSetting parseSetting) {
+        Cell itemNumberCell = row.getCell(parseSetting.getItemNumberCol());
+
+        String hexColor = getCellColorHex(itemNumberCell);
+        
+        return hexColor != null && !hexColor.equalsIgnoreCase(WHITE_COLOR);
+    }
+
+    private static int getQuantity(Row row, InvoiceParseSetting parseSetting) {
         Cell quantityCell = row.getCell(parseSetting.getQuantityCol());
+        if (quantityCell == null) return 0;
 
         if (quantityCell.getCellType() == CellType.NUMERIC) {
             return (int) quantityCell.getNumericCellValue();
@@ -108,7 +124,7 @@ public class PurchaseOrderService {
         return 0;
     }
 
-    private String getArticle(Row row, Cell articleCell, InvoiceParseSetting parseSetting) {
+    private static String getArticle(Row row, Cell articleCell, InvoiceParseSetting parseSetting) {
         Cell supplierArticleCell = row.getCell(parseSetting.getSupplierArticleCol());
         if (supplierArticleCell != null && supplierArticleCell.getCellType() != CellType.BLANK) {
             String supplierArticle = getDigits(getCellStringValue(supplierArticleCell));
@@ -121,21 +137,12 @@ public class PurchaseOrderService {
     }
 
     private static Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor) {
-        CellStyle style = articleCell.getCellStyle();
-        Color color = style.getFillForegroundColorColor();
-        
-        if (!(color instanceof XSSFColor)) {
+        String argbHex = getCellColorHex(articleCell);
+        if (argbHex == null) {
             log.info("Row {}: No fill color found. Using default supplier.", i + 1);
             return Optional.of(defaultSupplier);
         }
 
-        XSSFColor xssfColor = (XSSFColor) color;
-        if (xssfColor.isAuto() || xssfColor.getARGBHex() == null) {
-             log.info("Row {}: Color is AUTO or NULL. Using default supplier.", i + 1);
-             return Optional.of(defaultSupplier);
-        }
-
-        String argbHex = xssfColor.getARGBHex();
         log.info("Row {}: Found color ARGB HEX: {}", i + 1, argbHex);
         
         if (supplierByColor.containsKey(argbHex)) {
@@ -146,26 +153,58 @@ public class PurchaseOrderService {
         }
     }
 
-    private byte[] createZipArchive(Map<SupplierSetting, Map<String, Integer>> aggregatedData) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-            for (Map.Entry<SupplierSetting, Map<String, Integer>> entry : aggregatedData.entrySet()) {
-                SupplierSetting supplier = entry.getKey();
-                Map<String, Integer> articles = entry.getValue();
+    private static String getCellColorHex(Cell cell) {
+        CellStyle style = cell.getCellStyle();
+        Color color = style.getFillForegroundColorColor();
 
-                byte[] excelData = createExcelFile(articles);
-
-                ZipEntry zipEntry = new ZipEntry(supplier.getFileName());
-                zos.putNextEntry(zipEntry);
-                zos.write(excelData);
-                zos.closeEntry();
-                log.info("Added {} to ZIP archive.", supplier.getFileName());
-            }
+        if (color == null) {
+            return null;
         }
-        return baos.toByteArray();
+
+        if (color instanceof XSSFColor) {
+            XSSFColor xssfColor = (XSSFColor) color;
+            if (xssfColor.isAuto()) return null;
+            return xssfColor.getARGBHex();
+        } else if (color instanceof HSSFColor) {
+            HSSFColor hssfColor = (HSSFColor) color;
+            short[] triplet = hssfColor.getTriplet();
+            if (triplet == null) return null;
+            return String.format("FF%02X%02X%02X", triplet[0], triplet[1], triplet[2]).toUpperCase();
+        }
+        
+        return null;
     }
 
-    private byte[] createExcelFile(Map<String, Integer> articles) throws IOException {
+    private static String getCellStringValue(Cell cell) {
+        if (cell.getCellType() == CellType.NUMERIC) {
+            return String.valueOf((long)cell.getNumericCellValue());
+        }
+        return cell.getStringCellValue();
+    }
+
+    private static String getLastDigits(String text) {
+        if (text == null) {
+            return "";
+        }
+        Pattern pattern = Pattern.compile("\\d+");
+        Matcher matcher = pattern.matcher(text);
+
+        String lastMatch = "";
+        while (matcher.find()) {
+            lastMatch = matcher.group();
+        }
+
+        return lastMatch;
+    }
+
+    private static String getDigits(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replaceAll("\\D", "");
+    }
+
+    private static byte[] createExcelFile(Map<String, Integer> articles) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream fileOut = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Order");
             int rowNum = 0;
@@ -184,32 +223,22 @@ public class PurchaseOrderService {
         }
     }
 
-    private String getCellStringValue(Cell cell) {
-        if (cell.getCellType() == CellType.NUMERIC) {
-            return String.valueOf((long)cell.getNumericCellValue());
-        }
-        return cell.getStringCellValue();
-    }
+    private static byte[] createZipArchive(Map<SupplierSetting, Map<String, Integer>> aggregatedData) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            for (Map.Entry<SupplierSetting, Map<String, Integer>> entry : aggregatedData.entrySet()) {
+                SupplierSetting supplier = entry.getKey();
+                Map<String, Integer> articles = entry.getValue();
 
-    private String getLastDigits(String text) {
-        if (text == null) {
-            return "";
-        }
-        Pattern pattern = Pattern.compile("\\d+");
-        Matcher matcher = pattern.matcher(text);
-        
-        String lastMatch = "";
-        while (matcher.find()) {
-            lastMatch = matcher.group();
-        }
-        
-        return lastMatch;
-    }
+                byte[] excelData = createExcelFile(articles);
 
-    private String getDigits(String text) {
-        if (text == null) {
-            return "";
+                ZipEntry zipEntry = new ZipEntry(supplier.getFileName());
+                zos.putNextEntry(zipEntry);
+                zos.write(excelData);
+                zos.closeEntry();
+                log.info("Added {} to ZIP archive.", supplier.getFileName());
+            }
         }
-        return text.replaceAll("\\D", "");
+        return baos.toByteArray();
     }
 }

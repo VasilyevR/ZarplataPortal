@@ -73,7 +73,7 @@
         Drop files here
     </div>
     <div id="file-list"></div>
-    <input type="file" id="file-input" multiple accept=".xlsx" style="display: none;">
+    <input type="file" id="file-input" multiple accept=".xlsx, .xls" style="display: none;">
 
     <div th:if="${canGenerate}">
         <button id="submit-button" th:text="#{po.button.generate}">Generate</button>
@@ -130,7 +130,7 @@
     });
 
     function handleFiles(files) {
-        fileStore = [...fileStore, ...Array.from(files).filter(f => f.name.endsWith('.xlsx'))];
+        fileStore = [...fileStore, ...Array.from(files).filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.xls'))];
         renderFileList();
     }
 

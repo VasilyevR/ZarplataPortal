@@ -25,4 +25,7 @@ public class SupplierSetting {
 
     @Column(name = "file_name", nullable = false)
     private String fileName;
+
+    @Column(name = "is_default")
+    private Boolean isDefault;
 }
