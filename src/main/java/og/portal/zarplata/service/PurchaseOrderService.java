@@ -94,7 +94,7 @@ public class PurchaseOrderService {
     }
 
     private static boolean isInvoiceEnded(Cell articleCell) {
-        return articleCell == null || articleCell.getCellType() == CellType.BLANK;
+        return articleCell == null || articleCell.getCellType() == CellType.BLANK || articleCell.getCellType() == CellType.ERROR;
     }
 
     private static boolean shouldSkipRow(Row row, InvoiceParseSetting parseSetting, Workbook workbook) {
@@ -123,14 +123,26 @@ public class PurchaseOrderService {
                     log.warn("Failed to parse quantity from string: {}", quantityCell.getStringCellValue());
                 }
             }
+        } else if (quantityCell.getCellType() == CellType.FORMULA) {
+             try {
+                 return (int) quantityCell.getNumericCellValue();
+             } catch (IllegalStateException e) {
+                 try {
+                     String val = getLastDigits(quantityCell.getStringCellValue());
+                     if (!val.isEmpty()) return Integer.parseInt(val);
+                 } catch (Exception ex) {
+                     log.warn("Failed to evaluate formula for quantity: {}", ex.getMessage());
+                 }
+             }
         }
 
         return 0;
     }
 
     private static String getArticle(Row row, Cell articleCell, InvoiceParseSetting parseSetting) {
-        Cell supplierArticleCell = row.getCell(parseSetting.getSupplierArticleCol());
-        if (supplierArticleCell != null && supplierArticleCell.getCellType() != CellType.BLANK) {
+        int supplierArticleColIndex = parseSetting.getSupplierArticleCol();
+        Cell supplierArticleCell = row.getCell(supplierArticleColIndex);
+        if (supplierArticleCell != null && supplierArticleCell.getCellType() != CellType.BLANK && supplierArticleCell.getCellType() != CellType.ERROR) {
             String supplierArticle = getDigits(getCellStringValue(supplierArticleCell));
             if (!supplierArticle.isEmpty()) {
                 return supplierArticle;
@@ -144,7 +156,7 @@ public class PurchaseOrderService {
         String argbHex = getCellColorHex(articleCell, workbook);
         
         if (argbHex == null) {
-            log.info("Row {}: No fill color. Using default supplier.", i + 1);
+            log.info("Row {}: No fill color found. Using default supplier.", i + 1);
             return Optional.of(defaultSupplier);
         }
 
@@ -188,10 +200,26 @@ public class PurchaseOrderService {
     }
 
     private static String getCellStringValue(Cell cell) {
-        if (cell.getCellType() == CellType.NUMERIC) {
-            return String.valueOf((long)cell.getNumericCellValue());
+        if (cell == null) return "";
+        
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return String.valueOf((long)cell.getNumericCellValue());
+            case FORMULA:
+                try {
+                    return cell.getStringCellValue();
+                } catch (IllegalStateException e) {
+                    return String.valueOf((long)cell.getNumericCellValue());
+                }
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            case ERROR:
+                return "";
+            default:
+                return "";
         }
-        return cell.getStringCellValue();
     }
 
     private static String getLastDigits(String text) {
