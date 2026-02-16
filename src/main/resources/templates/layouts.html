@@ -7,13 +7,14 @@
     <style>
         body { padding-top: 70px; }
         .navbar { background-color: #e3f2fd; } /* Light Blue background */
+        .nav-link { font-weight: bold; font-size: 1.1rem; } /* Bold and slightly larger nav items */
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-expand-md navbar-light fixed-top" th:fragment="header">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/" th:text="#{navbar.brand}">Officegid Portal</a>
+        <a class="navbar-brand fw-bold fs-4" href="/" th:text="#{navbar.brand}">Officegid Portal</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
