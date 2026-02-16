@@ -1,26 +1,23 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title th:text="#{error.title}">Error</title>
-    <style>
-        body { font-family: sans-serif; margin: 2em; text-align: center; }
-        h1 { color: #d9534f; }
-        .message { font-size: 1.2em; margin-top: 20px; }
-        a { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #f2f2f2; text-decoration: none; color: #333; border: 1px solid #ccc; border-radius: 5px; }
-        a:hover { background-color: #e0e0e0; }
-    </style>
+<head th:replace="~{layouts :: head(#{error.title})}">
 </head>
 <body>
 
-<h1 th:text="#{error.header}">Oops! Something went wrong.</h1>
+<nav th:replace="~{layouts :: header}"></nav>
 
-<div class="message">
-    <p th:if="${error}" th:text="${error}"></p>
-    <p th:unless="${error}" th:text="#{error.default.message}">An unexpected error occurred.</p>
-    <p th:if="${status}" th:text="#{error.status(${status})}">Status Code: 000</p>
+<div class="container text-center mt-5">
+    <h1 class="text-danger" th:text="#{error.header}">Oops! Something went wrong.</h1>
+
+    <div class="message mt-4 fs-5">
+        <p th:if="${error}" th:text="${error}"></p>
+        <p th:unless="${error}" th:text="#{error.default.message}">An unexpected error occurred.</p>
+        <p th:if="${status}" th:text="#{error.status(${status})}">Status Code: 000</p>
+    </div>
+
+    <a href="/" class="btn btn-secondary mt-4" th:text="#{error.home.button}">Go to Home</a>
 </div>
 
-<a href="/" th:text="#{error.home.button}">Go to Home</a>
-
+<div th:replace="~{layouts :: footer}"></div>
 </body>
 </html>

@@ -1,41 +1,16 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title th:text="#{dashboard.title}">Dashboard</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            margin: 2em;
-        }
-        .menu-container {
-            display: flex;
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .menu-item {
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            text-decoration: none;
-            color: #333;
-            background-color: #f9f9f9;
-            transition: background-color 0.3s;
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-        .menu-item:hover {
-            background-color: #e0e0e0;
-        }
-    </style>
+<head th:replace="~{layouts :: head(#{dashboard.title})}">
 </head>
 <body>
 
-<h1 th:text="#{welcome.message(${user.login})}">Welcome, User</h1>
+<nav th:replace="~{layouts :: header}"></nav>
 
-<div class="menu-container">
-    <a href="/salary" class="menu-item" th:text="#{menu.salary}">My Salary</a>
-    <a href="/purchase-orders" class="menu-item" th:text="#{menu.purchase.orders}">Purchase Orders</a>
+<div class="container">
+    <h1 class="mt-5" th:text="#{welcome.message(${user.login})}">Welcome, User</h1>
+    <p class="lead">Select an option from the menu above.</p>
 </div>
 
+<div th:replace="~{layouts :: footer}"></div>
 </body>
 </html>

@@ -1,62 +1,43 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title th:text="#{salary.title}">Salary</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .warning {
-            color: #856404;
-            background-color: #fff3cd;
-            border-color: #ffeeba;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid transparent;
-            border-radius: 4px;
-        }
-    </style>
+<head th:replace="~{layouts :: head(#{salary.title})}">
 </head>
 <body>
 
-<h1 th:text="#{welcome.message(${user.login})}">Welcome, User</h1>
+<nav th:replace="~{layouts :: header}"></nav>
 
-<div th:if="${dataMissing}" class="warning">
-    <span th:text="#{salary.data.missing}">Salary data not found for your account. Please contact HR.</span>
+<div class="container">
+    <h1 class="mt-5" th:text="#{welcome.message(${user.login})}">Welcome, User</h1>
+
+    <div th:if="${dataMissing}" class="alert alert-warning mt-3" role="alert">
+        <span th:text="#{salary.data.missing}">Salary data not found for your account. Please contact HR.</span>
+    </div>
+
+    <div th:unless="${dataMissing}" class="mt-4">
+        <h2><span th:text="#{salary.total}">Total Salary</span>: <span th:text="${totalSalary}">0.00</span></h2>
+
+        <h3 class="mt-4" th:text="#{salary.paid.invoices}">Paid Invoices</h3>
+        <table class="table table-striped table-bordered">
+            <thead class="table-light">
+            <tr>
+                <th th:text="#{table.number}">Number</th>
+                <th th:text="#{table.client}">Client</th>
+                <th th:text="#{table.date}">Date</th>
+                <th th:text="#{table.amount}">Amount Paid</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="invoice : ${invoices}">
+                <td th:text="${invoice.number}">INV-001</td>
+                <td th:text="${invoice.client != null ? invoice.client.name : ''}">Client Name</td>
+                <td th:text="${invoice.givenDate}">2023-01-01</td>
+                <td th:text="${invoice.givenSum}">100.00</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<div th:unless="${dataMissing}">
-    <h2><span th:text="#{salary.total}">Total Salary</span>: <span th:text="${totalSalary}">0.00</span></h2>
-
-    <h3 th:text="#{salary.paid.invoices}">Paid Invoices</h3>
-    <table>
-        <thead>
-        <tr>
-            <th th:text="#{table.number}">Number</th>
-            <th th:text="#{table.client}">Client</th>
-            <th th:text="#{table.date}">Date</th>
-            <th th:text="#{table.amount}">Amount Paid</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="invoice : ${invoices}">
-            <td th:text="${invoice.number}">INV-001</td>
-            <td th:text="${invoice.client != null ? invoice.client.name : ''}">Client Name</td>
-            <td th:text="${invoice.givenDate}">2023-01-01</td>
-            <td th:text="${invoice.givenSum}">100.00</td>
-        </tr>
-        </tbody>
-    </table>
-</div>
-
+<div th:replace="~{layouts :: footer}"></div>
 </body>
 </html>

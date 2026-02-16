@@ -1,116 +1,77 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head>
-    <title th:text="#{po.title}">Purchase Order Generation</title>
-
-    <meta name="_csrf" th:content="${_csrf.token}"/>
-    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
-
-    <style>
-        body { font-family: sans-serif; margin: 2em; }
-        table { border-collapse: collapse; margin-bottom: 2em; }
-        th, td { border: 1px solid #ccc; padding: 8px; }
-        th { background-color: #f2f2f2; }
-        .color-cell { width: 100px; }
-        #drop-area {
-            border: 2px dashed #ccc;
-            border-radius: 20px;
-            width: 100%;
-            min-height: 200px;
-            padding: 20px;
-            text-align: center;
-            font-size: 1.2em;
-            color: #777;
-            margin-bottom: 1em;
-        }
-        #drop-area.highlight { border-color: purple; }
-        #file-list { margin-top: 10px; }
-        #file-list div { padding: 5px; background-color: #f9f9f9; border: 1px solid #eee; margin-bottom: 5px; }
-        button { font-size: 1.2em; padding: 10px 20px; cursor: pointer; }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 2s linear infinite;
-            display: none;
-            margin: 10px auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        #result-area {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #4CAF50;
-            background-color: #f0fff0;
-            border-radius: 5px;
-            display: none;
-        }
-        #result-area h3 { margin-top: 0; color: #2E7D32; }
-        #result-area ul { list-style-type: none; padding: 0; }
-        #result-area li { margin-bottom: 10px; }
-        #result-area a {
-            display: inline-block;
-            padding: 8px 15px;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        #result-area a:hover { background-color: #45a049; }
-    </style>
+<head th:replace="~{layouts :: head(#{po.title})}">
 </head>
 <body>
 
-<h1 th:text="#{po.title}">Purchase Order Generation</h1>
-<p th:text="#{po.description}">This page allows you to automatically generate order files for suppliers based on uploaded invoices.</p>
+<nav th:replace="~{layouts :: header}"></nav>
 
-<h2 th:text="#{po.settings.title}">Supplier Settings</h2>
-<table>
-    <thead>
-    <tr>
-        <th th:text="#{po.settings.color}">Excel Color</th>
-        <th th:text="#{po.settings.supplier}">Supplier Name</th>
-        <th th:text="#{po.settings.filename}">Order Filename</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="setting : ${supplierSettings}">
-        <td class="color-cell" th:style="${setting.colorHex != null} ? 'background-color: #' + ${#strings.substring(setting.colorHex, 2)} + ';' : ''">
-            <span th:text="${setting.colorName != null ? setting.colorName : #messages.msg('po.settings.default')}"></span>
-        </td>
-        <td th:text="${setting.title}">Supplier Name</td>
-        <td th:text="${setting.fileName}">filename.xlsx</td>
-    </tr>
-    </tbody>
-</table>
+<div class="container">
+    <h1 class="mt-5" th:text="#{po.title}">Purchase Order Generation</h1>
+    <p class="lead" th:text="#{po.description}">This page allows you to automatically generate order files for suppliers based on uploaded invoices.</p>
 
-<div sec:authorize="isAuthenticated()">
-    <h2 th:text="#{po.upload.title}">Upload Invoices</h2>
-    <p th:text="#{po.upload.desc}">Drag and drop invoice files (.xlsx) here or click to select.</p>
-
-    <div id="drop-area" th:text="#{po.drop.here}">
-        Drop files here
-    </div>
-    <div id="file-list"></div>
-    <input type="file" id="file-input" multiple accept=".xlsx, .xls" style="display: none;">
-
-    <div th:if="${canGenerate}">
-        <button id="submit-button" th:text="#{po.button.generate}">Generate</button>
-        <div id="spinner" class="spinner"></div>
-    </div>
-    <div th:unless="${canGenerate}">
-        <p><i th:text="#{po.no.rights}">You do not have permission to generate orders.</i></p>
+    <h2 class="mt-4" th:text="#{po.settings.title}">Supplier Settings</h2>
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered table-hover">
+            <thead class="table-info">
+            <tr>
+                <th th:text="#{po.settings.color}">Excel Color</th>
+                <th th:text="#{po.settings.supplier}">Supplier Name</th>
+                <th th:text="#{po.settings.filename}">Order Filename</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="setting : ${supplierSettings}">
+                <td class="text-center" style="width: 100px;">
+                    <div class="d-inline-block border"
+                         th:style="'width: 30px; height: 30px; background-color: #' + (${setting.colorHex != null} ? ${#strings.substring(setting.colorHex, 2)} : 'FFFFFF') + ';'"
+                         th:title="${setting.colorName != null ? setting.colorName : #messages.msg('po.settings.default')}">
+                    </div>
+                    <span class="ms-2 d-none d-md-inline" th:text="${setting.colorName != null ? setting.colorName : #messages.msg('po.settings.default')}"></span>
+                </td>
+                <td th:text="${setting.title}">Supplier Name</td>
+                <td th:text="${setting.fileName}">filename.xlsx</td>
+            </tr>
+            </tbody>
+        </table>
     </div>
 
-    <div id="result-area">
-        <h3 th:text="#{po.alert.success}">Files successfully generated!</h3>
-        <ul id="generated-files-list"></ul>
+    <div sec:authorize="isAuthenticated()" class="mt-5">
+        <h2 th:text="#{po.upload.title}">Upload Invoices</h2>
+        <p th:text="#{po.upload.desc}">Drag and drop invoice files (.xlsx) here or click to select.</p>
+
+        <div id="drop-area" class="p-5 text-center border border-2 border-primary border-dashed rounded bg-light text-primary fs-4 mb-3" style="cursor: pointer; border-style: dashed !important;">
+            <span th:text="#{po.drop.here}">Drop files here</span>
+            <br>
+            <i class="bi bi-cloud-upload fs-1"></i>
+        </div>
+        <div id="file-list" class="mb-3"></div>
+        <input type="file" id="file-input" multiple accept=".xlsx, .xls" style="display: none;">
+
+        <div th:if="${canGenerate}">
+            <button id="submit-button" class="btn btn-primary btn-lg" th:text="#{po.button.generate}">Generate</button>
+            <div id="spinner" class="spinner-border text-primary ms-3 align-middle" role="status" style="display: none;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div th:unless="${canGenerate}">
+            <div class="alert alert-warning" role="alert">
+                <i th:text="#{po.no.rights}">You do not have permission to generate orders.</i>
+            </div>
+        </div>
+
+        <div id="result-area" class="mt-4 p-3 border border-success bg-success-subtle rounded" style="display: none;">
+            <h3 class="text-success" th:text="#{po.alert.success}">Files successfully generated!</h3>
+            <ul id="generated-files-list" class="list-unstyled"></ul>
+        </div>
     </div>
 </div>
 
+<div th:replace="~{layouts :: footer}"></div>
+
+<!-- CSRF Meta Tags for JS -->
+<meta name="_csrf" th:content="${_csrf.token}"/>
+<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 
 <script th:inline="javascript">
     const dropArea = document.getElementById('drop-area');
@@ -141,11 +102,17 @@
     }
 
     ['dragenter', 'dragover'].forEach(eventName => {
-        dropArea.addEventListener(eventName, () => dropArea.classList.add('highlight'), false);
+        dropArea.addEventListener(eventName, () => {
+            dropArea.classList.add('bg-white');
+            dropArea.classList.remove('bg-light');
+        }, false);
     });
 
     ['dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, () => dropArea.classList.remove('highlight'), false);
+        dropArea.addEventListener(eventName, () => {
+            dropArea.classList.remove('bg-white');
+            dropArea.classList.add('bg-light');
+        }, false);
     });
 
     dropArea.addEventListener('drop', handleDrop, false);
@@ -169,7 +136,9 @@
             fileListDiv.innerHTML = `<strong>${msgSelectedFiles} (${fileStore.length}):</strong>`;
             fileStore.forEach((file, index) => {
                 const fileDiv = document.createElement('div');
-                fileDiv.textContent = file.name;
+                fileDiv.className = 'p-2 bg-white border rounded mb-1 d-flex justify-content-between align-items-center';
+                fileDiv.innerHTML = `<span>${file.name}</span>`;
+                // Optional: Add remove button here
                 fileListDiv.appendChild(fileDiv);
             });
         }
@@ -183,7 +152,7 @@
             }
 
             submitButton.disabled = true;
-            spinner.style.display = 'block';
+            spinner.style.display = 'inline-block';
             resultArea.style.display = 'none';
             generatedFilesList.innerHTML = '';
 
@@ -209,9 +178,11 @@
                     if (fileNames && fileNames.length > 0) {
                         fileNames.forEach((fileName, index) => {
                             const li = document.createElement('li');
+                            li.className = 'mb-2';
                             const a = document.createElement('a');
                             a.href = `/purchase-orders/download/${index}`;
                             a.textContent = `Download ${fileName}`;
+                            a.className = 'btn btn-outline-success btn-sm';
                             a.target = '_blank';
                             li.appendChild(a);
                             generatedFilesList.appendChild(li);
