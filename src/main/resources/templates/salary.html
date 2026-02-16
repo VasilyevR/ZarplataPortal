@@ -7,7 +7,7 @@
 <nav th:replace="~{layouts :: header}"></nav>
 
 <div class="container">
-    <h1 class="mt-5" th:text="#{welcome.message(${user.login})}">Welcome, User</h1>
+    <h1 class="mt-5" th:text="#{salary.title}">Salary</h1>
 
     <div th:if="${dataMissing}" class="alert alert-warning mt-3" role="alert">
         <span th:text="#{salary.data.missing}">Salary data not found for your account. Please contact HR.</span>
