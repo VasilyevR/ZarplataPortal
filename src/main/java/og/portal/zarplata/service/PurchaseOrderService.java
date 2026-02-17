@@ -41,7 +41,7 @@ public class PurchaseOrderService {
         SupplierSetting defaultSupplier = supplierSettingRepository.findByIsDefaultTrue()
                 .orElseThrow(() -> new IllegalStateException("Default supplier (isDefault=true) not found"));
 
-        Map<SupplierSetting, Map<String, Integer>> aggregatedData = new HashMap<>();
+        Map<SupplierSetting, Map<String, Integer>> aggregatedData = new LinkedHashMap<>();
 
         List<MultipartFile> sortedFiles = sortFilesByName(files);
 
@@ -71,7 +71,7 @@ public class PurchaseOrderService {
                     Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor, workbook);
 
                     if (currentSupplier.isPresent()) {
-                        aggregatedData.computeIfAbsent(currentSupplier.get(), k -> new HashMap<>())
+                        aggregatedData.computeIfAbsent(currentSupplier.get(), k -> new LinkedHashMap<>())
                                 .merge(article, quantity, Integer::sum);
                     }
                 }
