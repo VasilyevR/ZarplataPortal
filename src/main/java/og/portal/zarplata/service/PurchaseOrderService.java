@@ -18,11 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.text.Collator;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,7 +43,9 @@ public class PurchaseOrderService {
 
         Map<SupplierSetting, Map<String, Integer>> aggregatedData = new HashMap<>();
 
-        for (MultipartFile file : files) {
+        List<MultipartFile> sortedFiles = sortFilesByName(files);
+
+        for (MultipartFile file : sortedFiles) {
             log.info("Processing file: {}", file.getOriginalFilename());
             try (InputStream is = file.getInputStream(); Workbook workbook = WorkbookFactory.create(is)) {
                 Sheet sheet = workbook.getSheetAt(0);
@@ -80,6 +79,20 @@ public class PurchaseOrderService {
         }
 
         return createGeneratedFiles(aggregatedData);
+    }
+
+    private List<MultipartFile> sortFilesByName(MultipartFile[] files) {
+        List<MultipartFile> fileList = new ArrayList<>(List.of(files));
+        Collator collator = Collator.getInstance(new Locale("ru", "RU"));
+        
+        fileList.sort((f1, f2) -> {
+            String name1 = f1.getOriginalFilename();
+            String name2 = f2.getOriginalFilename();
+            if (name1 == null) name1 = "";
+            if (name2 == null) name2 = "";
+            return collator.compare(name1, name2);
+        });
+        return fileList;
     }
 
     private Map<String, SupplierSetting> getSuppliers() {
