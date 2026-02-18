@@ -7,21 +7,17 @@ import og.portal.zarplata.model.InvoiceParseSetting;
 import og.portal.zarplata.model.SupplierSetting;
 import og.portal.zarplata.repository.InvoiceParseSettingRepository;
 import og.portal.zarplata.repository.SupplierSettingRepository;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.hssf.util.HSSFColor;
+import og.portal.zarplata.service.excel.ExcelHelperService;
+import og.portal.zarplata.service.excel.OrderGeneratorService;
+import og.portal.zarplata.service.util.DataCleaningService;
+import og.portal.zarplata.service.util.WindowsExplorerComparator;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFColor;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.Collator;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -32,6 +28,9 @@ public class PurchaseOrderService {
 
     private final SupplierSettingRepository supplierSettingRepository;
     private final InvoiceParseSettingRepository invoiceParseSettingRepository;
+    private final DataCleaningService dataCleaningService;
+    private final ExcelHelperService excelHelperService;
+    private final OrderGeneratorService orderGeneratorService;
 
     public List<GeneratedFileDTO> generatePurchaseOrders(MultipartFile[] files) throws IOException {
         InvoiceParseSetting parseSetting = invoiceParseSettingRepository.findAll().stream().findFirst()
@@ -83,14 +82,14 @@ public class PurchaseOrderService {
 
     private List<MultipartFile> sortFilesByName(MultipartFile[] files) {
         List<MultipartFile> fileList = new ArrayList<>(List.of(files));
-        Collator collator = Collator.getInstance(new Locale("ru", "RU"));
+        WindowsExplorerComparator comparator = new WindowsExplorerComparator();
         
         fileList.sort((f1, f2) -> {
             String name1 = f1.getOriginalFilename();
             String name2 = f2.getOriginalFilename();
             if (name1 == null) name1 = "";
             if (name2 == null) name2 = "";
-            return collator.compare(name1, name2);
+            return comparator.compare(name1, name2);
         });
         return fileList;
     }
@@ -110,25 +109,25 @@ public class PurchaseOrderService {
         return articleCell == null || articleCell.getCellType() == CellType.BLANK || articleCell.getCellType() == CellType.ERROR;
     }
 
-    private static boolean shouldSkipRow(Row row, InvoiceParseSetting parseSetting, Workbook workbook) {
+    private boolean shouldSkipRow(Row row, InvoiceParseSetting parseSetting, Workbook workbook) {
         Cell itemNumberCell = row.getCell(parseSetting.getItemNumberCol());
         if (itemNumberCell == null) {
             return false;
         }
 
-        String hexColor = getCellColorHex(itemNumberCell, workbook);
+        String hexColor = excelHelperService.getCellColorHex(itemNumberCell, workbook);
         
         return hexColor != null && !hexColor.equalsIgnoreCase(WHITE_COLOR);
     }
 
-    private static int getQuantity(Row row, InvoiceParseSetting parseSetting) {
+    private int getQuantity(Row row, InvoiceParseSetting parseSetting) {
         Cell quantityCell = row.getCell(parseSetting.getQuantityCol());
         if (quantityCell == null) return 0;
 
         if (quantityCell.getCellType() == CellType.NUMERIC) {
             return (int) quantityCell.getNumericCellValue();
         } else if (quantityCell.getCellType() == CellType.STRING) {
-            String val = getLastDigits(quantityCell.getStringCellValue());
+            String val = dataCleaningService.getLastDigits(quantityCell.getStringCellValue());
             if (!val.isEmpty()) {
                 try {
                     return Integer.parseInt(val);
@@ -141,7 +140,7 @@ public class PurchaseOrderService {
                  return (int) quantityCell.getNumericCellValue();
              } catch (IllegalStateException e) {
                  try {
-                     String val = getLastDigits(quantityCell.getStringCellValue());
+                     String val = dataCleaningService.getLastDigits(quantityCell.getStringCellValue());
                      if (!val.isEmpty()) return Integer.parseInt(val);
                  } catch (Exception ex) {
                      log.warn("Failed to evaluate formula for quantity: {}", ex.getMessage());
@@ -152,21 +151,21 @@ public class PurchaseOrderService {
         return 0;
     }
 
-    private static String getArticle(Row row, Cell articleCell, InvoiceParseSetting parseSetting) {
+    private String getArticle(Row row, Cell articleCell, InvoiceParseSetting parseSetting) {
         int supplierArticleColIndex = parseSetting.getSupplierArticleCol();
         Cell supplierArticleCell = row.getCell(supplierArticleColIndex);
         if (supplierArticleCell != null && supplierArticleCell.getCellType() != CellType.BLANK && supplierArticleCell.getCellType() != CellType.ERROR) {
-            String supplierArticle = getDigits(getCellStringValue(supplierArticleCell));
+            String supplierArticle = dataCleaningService.getDigits(excelHelperService.getCellStringValue(supplierArticleCell));
             if (!supplierArticle.isEmpty()) {
                 return supplierArticle;
             }
         }
 
-        return trimNonDigits(getCellStringValue(articleCell));
+        return dataCleaningService.trimNonDigits(excelHelperService.getCellStringValue(articleCell));
     }
 
-    private static Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor, Workbook workbook) {
-        String argbHex = getCellColorHex(articleCell, workbook);
+    private Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor, Workbook workbook) {
+        String argbHex = excelHelperService.getCellColorHex(articleCell, workbook);
         
         if (argbHex == null) {
             log.info("Row {}: No fill color found. Using default supplier.", i + 1);
@@ -183,113 +182,13 @@ public class PurchaseOrderService {
         }
     }
 
-    private static String getCellColorHex(Cell cell, Workbook workbook) {
-        CellStyle style = cell.getCellStyle();
-        Color color = style.getFillForegroundColorColor();
-
-        if (color == null) {
-            return null;
-        }
-
-        if (color instanceof XSSFColor) {
-            XSSFColor xssfColor = (XSSFColor) color;
-            if (xssfColor.isAuto()) return null;
-            return xssfColor.getARGBHex();
-        } else if (color instanceof HSSFColor) {
-            HSSFColor hssfColor = (HSSFColor) color;
-            short[] triplet = hssfColor.getTriplet();
-            if (triplet == null) return null;
-            return String.format("FF%02X%02X%02X", triplet[0], triplet[1], triplet[2]).toUpperCase();
-        } else if (workbook instanceof HSSFWorkbook) {
-             short index = style.getFillForegroundColor();
-             HSSFColor hssfColor = ((HSSFWorkbook) workbook).getCustomPalette().getColor(index);
-             if (hssfColor != null) {
-                 short[] triplet = hssfColor.getTriplet();
-                 return String.format("FF%02X%02X%02X", triplet[0], triplet[1], triplet[2]).toUpperCase();
-             }
-        }
-        
-        return null;
-    }
-
-    private static String getCellStringValue(Cell cell) {
-        if (cell == null) return "";
-        
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue();
-            case NUMERIC:
-                return String.valueOf((long)cell.getNumericCellValue());
-            case FORMULA:
-                try {
-                    return cell.getStringCellValue();
-                } catch (IllegalStateException e) {
-                    return String.valueOf((long)cell.getNumericCellValue());
-                }
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            case ERROR:
-                return "";
-            default:
-                return "";
-        }
-    }
-
-    private static String getLastDigits(String text) {
-        if (text == null) {
-            return "";
-        }
-        Pattern pattern = Pattern.compile("\\d+");
-        Matcher matcher = pattern.matcher(text);
-
-        String lastMatch = "";
-        while (matcher.find()) {
-            lastMatch = matcher.group();
-        }
-
-        return lastMatch;
-    }
-
-    private static String getDigits(String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.replaceAll("\\D", "");
-    }
-
-    private static String trimNonDigits(String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.replaceAll("^\\D+|\\D+$", "");
-    }
-
-    private static byte[] createExcelFile(Map<String, Integer> articles) throws IOException {
-        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream fileOut = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("Order");
-            int rowNum = 0;
-
-            for (Map.Entry<String, Integer> articleEntry : articles.entrySet()) {
-                Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(articleEntry.getKey());
-                row.createCell(1).setCellValue(articleEntry.getValue());
-            }
-
-            sheet.autoSizeColumn(0);
-            sheet.autoSizeColumn(1);
-
-            workbook.write(fileOut);
-            return fileOut.toByteArray();
-        }
-    }
-
     private List<GeneratedFileDTO> createGeneratedFiles(Map<SupplierSetting, Map<String, Integer>> aggregatedData) throws IOException {
         List<GeneratedFileDTO> result = new ArrayList<>();
         for (Map.Entry<SupplierSetting, Map<String, Integer>> entry : aggregatedData.entrySet()) {
             SupplierSetting supplier = entry.getKey();
             Map<String, Integer> articles = entry.getValue();
 
-            byte[] excelData = createExcelFile(articles);
+            byte[] excelData = orderGeneratorService.createOrderFile(articles);
             result.add(new GeneratedFileDTO(supplier.getFileName(), excelData));
             
             log.info("Generated file: {}", supplier.getFileName());
