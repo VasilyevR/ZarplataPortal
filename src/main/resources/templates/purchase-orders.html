@@ -46,7 +46,7 @@
             <i class="bi bi-cloud-upload fs-1"></i>
         </div>
         <div id="file-list" class="mb-3"></div>
-        <input type="file" id="file-input" multiple accept=".xlsx, .xls" style="display: none;">
+        <input type="file" id="file-input" multiple accept=".xlsx" style="display: none;">
 
         <div th:if="${canGenerate}">
             <button id="submit-button" class="btn btn-primary btn-lg" th:text="#{po.button.generate}">Generate</button>
@@ -125,7 +125,7 @@
     });
 
     function handleFiles(files) {
-        fileStore = [...fileStore, ...Array.from(files).filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.xls'))];
+        fileStore = [...fileStore, ...Array.from(files).filter(f => f.name.endsWith('.xlsx'))];
         renderFileList();
         resultArea.style.display = 'none';
     }

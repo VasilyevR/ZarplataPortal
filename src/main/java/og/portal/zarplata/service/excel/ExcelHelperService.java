@@ -1,8 +1,6 @@
 package og.portal.zarplata.service.excel;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.springframework.stereotype.Service;
@@ -80,18 +78,6 @@ public class ExcelHelperService {
             XSSFColor xssfColor = (XSSFColor) color;
             if (xssfColor.isAuto()) return null;
             return xssfColor.getARGBHex();
-        } else if (color instanceof HSSFColor) {
-            HSSFColor hssfColor = (HSSFColor) color;
-            short[] triplet = hssfColor.getTriplet();
-            if (triplet == null) return null;
-            return String.format("FF%02X%02X%02X", triplet[0], triplet[1], triplet[2]).toUpperCase();
-        } else if (workbook instanceof HSSFWorkbook) {
-            short index = style.getFillForegroundColor();
-            HSSFColor hssfColor = ((HSSFWorkbook) workbook).getCustomPalette().getColor(index);
-            if (hssfColor != null) {
-                short[] triplet = hssfColor.getTriplet();
-                return String.format("FF%02X%02X%02X", triplet[0], triplet[1], triplet[2]).toUpperCase();
-            }
         }
 
         return null;

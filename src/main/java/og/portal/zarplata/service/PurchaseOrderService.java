@@ -7,11 +7,12 @@ import og.portal.zarplata.model.InvoiceParseSetting;
 import og.portal.zarplata.model.SupplierSetting;
 import og.portal.zarplata.repository.InvoiceParseSettingRepository;
 import og.portal.zarplata.repository.SupplierSettingRepository;
-import og.portal.zarplata.service.excel.ExcelHelperService;
 import og.portal.zarplata.service.excel.OrderGeneratorService;
+import og.portal.zarplata.service.excel.ExcelHelperService;
 import og.portal.zarplata.service.util.DataCleaningService;
 import og.portal.zarplata.service.util.WindowsExplorerComparator;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -46,7 +47,7 @@ public class PurchaseOrderService {
 
         for (MultipartFile file : sortedFiles) {
             log.info("Processing file: {}", file.getOriginalFilename());
-            try (InputStream is = file.getInputStream(); Workbook workbook = WorkbookFactory.create(is)) {
+            try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
                 Sheet sheet = workbook.getSheetAt(0);
                 for (int i = parseSetting.getStartRow(); i <= sheet.getLastRowNum(); i++) {
                     Row row = sheet.getRow(i);
