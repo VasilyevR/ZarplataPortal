@@ -1,14 +1,14 @@
 package og.portal.zarplata.service.util;
 
-import org.springframework.stereotype.Service;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Service
-public class DataCleaningService {
+public final class DataCleaningService {
+    private DataCleaningService() {
+        throw new IllegalCallerException("DataCleaningService class cannot be instantiated");
+    }
 
-    public String getLastDigits(String text) {
+    public static String getLastDigits(String text) {
         if (text == null) {
             return "";
         }
@@ -23,14 +23,14 @@ public class DataCleaningService {
         return lastMatch;
     }
 
-    public String getDigits(String text) {
+    public static String getDigits(String text) {
         if (text == null) {
             return "";
         }
         return text.replaceAll("\\D", "");
     }
 
-    public String trimNonDigits(String text) {
+    public static String trimNonDigits(String text) {
         if (text == null) {
             return "";
         }

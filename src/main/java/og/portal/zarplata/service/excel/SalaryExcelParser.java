@@ -20,8 +20,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SalaryExcelParser {
 
-    private final ExcelHelperService excelHelperService;
-
     public Map<String, BigDecimal> parseSalaryFile(File file) throws IOException {
         Map<String, BigDecimal> salaryData = new HashMap<>();
 
@@ -32,12 +30,12 @@ public class SalaryExcelParser {
             for (Row row : sheet) {
                 if (row.getRowNum() == 0) continue; // Skip header
 
-                String invoiceNumber = excelHelperService.getCellStringValue(row.getCell(0));
+                String invoiceNumber = ExcelHelperService.getCellStringValue(row.getCell(0));
                 if (invoiceNumber == null || invoiceNumber.trim().isEmpty()) {
                     continue;
                 }
 
-                BigDecimal amount = excelHelperService.getCellBigDecimalValue(row.getCell(1));
+                BigDecimal amount = ExcelHelperService.getCellBigDecimalValue(row.getCell(1));
                 
                 salaryData.put(invoiceNumber, amount);
             }

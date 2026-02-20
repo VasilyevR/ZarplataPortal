@@ -29,9 +29,6 @@ public class PurchaseOrderService {
 
     private final SupplierSettingRepository supplierSettingRepository;
     private final InvoiceParseSettingRepository invoiceParseSettingRepository;
-    private final DataCleaningService dataCleaningService;
-    private final ExcelHelperService excelHelperService;
-    private final OrderGeneratorService orderGeneratorService;
 
     public List<GeneratedFileDTO> generatePurchaseOrders(MultipartFile[] files) throws IOException {
         InvoiceParseSetting parseSetting = invoiceParseSettingRepository.findAll().stream().findFirst()
@@ -116,7 +113,7 @@ public class PurchaseOrderService {
             return false;
         }
 
-        String hexColor = excelHelperService.getCellColorHex(itemNumberCell, workbook);
+        String hexColor = ExcelHelperService.getCellColorHex(itemNumberCell, workbook);
         
         return hexColor != null && !hexColor.equalsIgnoreCase(WHITE_COLOR);
     }
@@ -128,7 +125,7 @@ public class PurchaseOrderService {
         if (quantityCell.getCellType() == CellType.NUMERIC) {
             return (int) quantityCell.getNumericCellValue();
         } else if (quantityCell.getCellType() == CellType.STRING) {
-            String val = dataCleaningService.getLastDigits(quantityCell.getStringCellValue());
+            String val = DataCleaningService.getLastDigits(quantityCell.getStringCellValue());
             if (!val.isEmpty()) {
                 try {
                     return Integer.parseInt(val);
@@ -141,7 +138,7 @@ public class PurchaseOrderService {
                  return (int) quantityCell.getNumericCellValue();
              } catch (IllegalStateException e) {
                  try {
-                     String val = dataCleaningService.getLastDigits(quantityCell.getStringCellValue());
+                     String val = DataCleaningService.getLastDigits(quantityCell.getStringCellValue());
                      if (!val.isEmpty()) return Integer.parseInt(val);
                  } catch (Exception ex) {
                      log.warn("Failed to evaluate formula for quantity: {}", ex.getMessage());
@@ -156,17 +153,17 @@ public class PurchaseOrderService {
         int supplierArticleColIndex = parseSetting.getSupplierArticleCol();
         Cell supplierArticleCell = row.getCell(supplierArticleColIndex);
         if (supplierArticleCell != null && supplierArticleCell.getCellType() != CellType.BLANK && supplierArticleCell.getCellType() != CellType.ERROR) {
-            String supplierArticle = dataCleaningService.getDigits(excelHelperService.getCellStringValue(supplierArticleCell));
+            String supplierArticle = DataCleaningService.getDigits(ExcelHelperService.getCellStringValue(supplierArticleCell));
             if (!supplierArticle.isEmpty()) {
                 return supplierArticle;
             }
         }
 
-        return dataCleaningService.trimNonDigits(excelHelperService.getCellStringValue(articleCell));
+        return DataCleaningService.trimNonDigits(ExcelHelperService.getCellStringValue(articleCell));
     }
 
     private Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor, Workbook workbook) {
-        String argbHex = excelHelperService.getCellColorHex(articleCell, workbook);
+        String argbHex = ExcelHelperService.getCellColorHex(articleCell, workbook);
         
         if (argbHex == null) {
             log.info("Row {}: No fill color found. Using default supplier.", i + 1);
@@ -189,7 +186,7 @@ public class PurchaseOrderService {
             SupplierSetting supplier = entry.getKey();
             Map<String, Integer> articles = entry.getValue();
 
-            byte[] excelData = orderGeneratorService.createOrderFile(articles);
+            byte[] excelData = OrderGeneratorService.createOrderFile(articles);
             result.add(new GeneratedFileDTO(supplier.getFileName(), excelData));
             
             log.info("Generated file: {}", supplier.getFileName());

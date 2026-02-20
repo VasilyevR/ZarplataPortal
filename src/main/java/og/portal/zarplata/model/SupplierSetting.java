@@ -7,6 +7,7 @@ import lombok.*;
 @Setter
 @ToString
 @NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "supplier_setting")
 public class SupplierSetting {

@@ -3,15 +3,16 @@ package og.portal.zarplata.service.excel;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFColor;
-import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 
 @Slf4j
-@Service
-public class ExcelHelperService {
+public final class ExcelHelperService {
+    private ExcelHelperService() {
+        throw new IllegalCallerException("ExcelHelperService can't be instantiated");
+    }
 
-    public String getCellStringValue(Cell cell) {
+    public static String getCellStringValue(Cell cell) {
         if (cell == null) return "";
 
         switch (cell.getCellType()) {
@@ -41,7 +42,7 @@ public class ExcelHelperService {
         }
     }
 
-    public BigDecimal getCellBigDecimalValue(Cell cell) {
+    public static BigDecimal getCellBigDecimalValue(Cell cell) {
         if (cell == null) return BigDecimal.ZERO;
         switch (cell.getCellType()) {
             case NUMERIC:
@@ -66,7 +67,7 @@ public class ExcelHelperService {
         }
     }
 
-    public String getCellColorHex(Cell cell, Workbook workbook) {
+    public static String getCellColorHex(Cell cell, Workbook workbook) {
         CellStyle style = cell.getCellStyle();
         Color color = style.getFillForegroundColorColor();
 

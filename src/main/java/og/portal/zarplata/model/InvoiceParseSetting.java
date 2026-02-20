@@ -7,6 +7,7 @@ import lombok.*;
 @Setter
 @ToString
 @NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "invoice_parse_setting")
 public class InvoiceParseSetting {
