@@ -28,4 +28,7 @@ public class SalaryColumnMapping {
 
     @Column(name = "is_salary", nullable = false)
     private boolean salary;
+
+    @Column(name = "is_currency", nullable = false)
+    private boolean currency;
 }

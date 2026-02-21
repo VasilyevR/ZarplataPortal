@@ -12,6 +12,7 @@ import og.portal.zarplata.repository.ColorMappingRepository;
 import og.portal.zarplata.repository.SalaryColumnMappingRepository;
 import og.portal.zarplata.repository.SalaryParseSettingRepository;
 import og.portal.zarplata.service.excel.ExcelHelperService;
+import og.portal.zarplata.service.util.DataCleaningService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
@@ -124,7 +125,11 @@ public class SalaryService {
                     }
 
                     if (mapping.isVisible()) {
+                        if (mapping.isCurrency()) {
+                            cellValue = DataCleaningService.formatCurrency(cellValue);
+                        }
                         rowDTO.getColumnValues().put(mapping.getExcelColIndex(), cellValue);
+                        
                         if (mapping.isUseExcelColor()) {
                             String excelColor = ExcelHelperService.getCellColorHex(cell);
                             if (excelColor != null && colorMap.containsKey(excelColor)) {
