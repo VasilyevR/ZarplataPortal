@@ -28,17 +28,29 @@ public final class ExcelHelperService {
                 }
                 return String.valueOf(val);
             case FORMULA:
-                try {
-                    return cell.getStringCellValue();
-                } catch (IllegalStateException e) {
-                    return String.valueOf(cell.getNumericCellValue());
-                }
+                return getFormulaCellValue(cell);
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue());
             case ERROR:
                 return "";
             default:
                 return "";
+        }
+    }
+
+    private static String getFormulaCellValue(Cell cell) {
+        try {
+            return cell.getStringCellValue();
+        } catch (IllegalStateException e) {
+            try {
+                return String.valueOf(cell.getNumericCellValue());
+            } catch (IllegalStateException ex) {
+                try {
+                    return String.valueOf(cell.getBooleanCellValue());
+                } catch (IllegalStateException exc) {
+                    return "";
+                }
+            }
         }
     }
 
