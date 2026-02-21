@@ -3,11 +3,11 @@ package og.portal.zarplata.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import og.portal.zarplata.dto.GeneratedFileDTO;
+import og.portal.zarplata.dto.SupplierSettingDTO;
 import og.portal.zarplata.enums.AppRole;
-import og.portal.zarplata.model.SupplierSetting;
-import og.portal.zarplata.repository.SupplierSettingRepository;
 import og.portal.zarplata.service.PurchaseOrderService;
 import og.portal.zarplata.service.SecurityService;
+import og.portal.zarplata.service.SupplierService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,14 +30,14 @@ public class PurchaseOrderController {
 
     private static final String SESSION_FILES_KEY = "GENERATED_ORDER_FILES";
 
-    private final SupplierSettingRepository supplierSettingRepository;
+    private final SupplierService supplierService;
     private final PurchaseOrderService purchaseOrderService;
     private final SecurityService securityService;
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public String showPurchaseOrderPage(Model model) {
-        List<SupplierSetting> supplierSettings = supplierSettingRepository.findAll();
+        List<SupplierSettingDTO> supplierSettings = supplierService.getAllSupplierSettings();
         model.addAttribute("supplierSettings", supplierSettings);
         
         boolean canGenerate = securityService.hasRole(AppRole.ORDER_GENERATOR);
@@ -52,7 +52,6 @@ public class PurchaseOrderController {
     public ResponseEntity<List<String>> generateOrders(@RequestParam("files") MultipartFile[] files, HttpSession session) {
         try {
             List<GeneratedFileDTO> generatedFiles = purchaseOrderService.generatePurchaseOrders(files);
-
             session.setAttribute(SESSION_FILES_KEY, generatedFiles);
 
             List<String> fileNames = generatedFiles.stream()
@@ -60,9 +59,8 @@ public class PurchaseOrderController {
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(fileNames);
-
         } catch (IOException e) {
-            return ResponseEntity.status(500).body(null);
+            return ResponseEntity.status(500).build();
         }
     }
 

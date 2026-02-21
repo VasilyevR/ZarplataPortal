@@ -4,16 +4,18 @@ Zarplata Portal is a corporate web application designed for internal use within 
 
 ## Business Features
 
-*   **Salary Dashboard**: Employees can view their salary details, calculated based on paid invoices and a personal percentage rate.
+*   **Salary Dashboard**: Employees can view their salary history parsed in real-time from personal Excel files. Data is grouped by month and year with interactive drill-down details.
+*   **On-the-fly Parsing**: Salary data is not stored in the database but parsed directly from a secure network share when a user accesses the portal. Results are cached in the user session for performance.
 *   **Purchase Order Generation**: Authorized users (e.g., managers) can upload multiple Excel invoices. The system automatically parses them, aggregates items by supplier (identified by cell background color), and generates separate order files for each supplier.
-*   **Automated Salary Sync**: The system periodically scans a network folder for new Excel salary files and updates the database.
+*   **Manager Overlook**: Users with elevated roles can view salary data for any employee by selecting them from a managed list.
 
 ## Technical Features
 
 *   **Single Sign-On (SSO)**: Seamless authentication using Windows credentials (NTLM/Kerberos) via Waffle. No manual login required for domain users.
-*   **Role-Based Access Control (RBAC)**: Dynamic mapping of application roles (e.g., `ORDER_GENERATOR`) to Active Directory groups stored in the database. Supports many-to-many relationships.
-*   **Internationalization (i18n)**: Support for English and Russian languages based on browser settings.
-*   **Excel Processing**: Advanced parsing of `.xlsx` files using Apache POI, including cell color detection and data aggregation.
+*   **Role-Based Access Control (RBAC)**: Dynamic mapping of application roles to Active Directory groups stored in the database.
+*   **Dynamic Column Mapping**: Administrators can configure which Excel columns are visible to users and which columns should be used for total amount calculations via database settings.
+*   **Internationalization (i18n)**: Full support for English and Russian languages.
+*   **Excel Processing**: Advanced parsing of `.xlsx` files using Apache POI, including real-time cell background color mapping to HTML styles.
 *   **Secure Deployment**: Runs as a Windows Service under a specific service account with limited privileges.
 
 ## Technology Stack

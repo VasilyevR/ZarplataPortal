@@ -2,5 +2,7 @@ package og.portal.zarplata.enums;
 
 public enum AppRole {
     ORDER_GENERATOR,
-    ADMIN
+    ADMIN,
+    SALARY_READER,
+    USER_MANAGER
 }

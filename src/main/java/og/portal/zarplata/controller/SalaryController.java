@@ -1,20 +1,23 @@
 package og.portal.zarplata.controller;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import og.portal.zarplata.model.Invoice;
-import og.portal.zarplata.model.User;
-import og.portal.zarplata.repository.InvoiceRepository;
-import og.portal.zarplata.repository.UserRepository;
+import og.portal.zarplata.dto.SalaryColumnMappingDTO;
+import og.portal.zarplata.dto.SalaryMonthDTO;
+import og.portal.zarplata.dto.UserDTO;
+import og.portal.zarplata.enums.AppRole;
+import og.portal.zarplata.service.SecurityService;
+import og.portal.zarplata.service.SalaryMappingService;
+import og.portal.zarplata.service.SalaryService;
+import og.portal.zarplata.service.UserService;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -23,44 +26,38 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SalaryController {
 
-    private final UserRepository userRepository;
-    private final InvoiceRepository invoiceRepository;
+    private final UserService userService;
+    private final SalaryService salaryService;
+    private final SalaryMappingService salaryMappingService;
+    private final SecurityService securityService;
 
     @GetMapping
-    public String showSalary(Model model, Authentication authentication) {
-        String username = authentication.getName();
-        log.info("SalaryController: Request for user '{}'", username);
+    @org.springframework.security.access.prepost.PreAuthorize("@securityService.hasRole('SALARY_READER') or @securityService.hasRole('USER_MANAGER')")
+    public String showSalary(Model model, 
+                             Authentication authentication, 
+                             HttpSession session,
+                             @RequestParam(value = "user", required = false) String targetUser) {
+        
+        String currentLogin = authentication.getName();
+        boolean isUserManager = securityService.hasRole(AppRole.USER_MANAGER);
 
-        User user = userRepository.findByLogin(username).orElse(null);
-
-        if (user == null) {
-            log.warn("SalaryController: User '{}' not found in database. Showing empty salary page.", username);
-            User tempUser = new User();
-            tempUser.setLogin(username);
-            
-            model.addAttribute("user", tempUser);
-            model.addAttribute("invoices", Collections.emptyList());
-            model.addAttribute("totalSalary", BigDecimal.ZERO);
-            model.addAttribute("dataMissing", true);
-            return "salary";
+        String viewUser = currentLogin;
+        if (isUserManager && targetUser != null && !targetUser.isEmpty()) {
+            viewUser = targetUser;
         }
 
-        List<Invoice> invoices = invoiceRepository.findByUser(user);
+        UserDTO user = userService.getUserByLogin(viewUser);
+        List<SalaryMonthDTO> salaryData = salaryService.getSalaryData(user.getLogin(), session);
+        List<SalaryColumnMappingDTO> visibleColumns = salaryMappingService.getVisibleColumns();
 
-        BigDecimal totalSalary = BigDecimal.ZERO;
-        if (user.getPercent() != null) {
-            BigDecimal totalPaidSum = invoices.stream()
-                    .map(Invoice::getGivenSum)
-                    .filter(sum -> sum != null)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            totalSalary = totalPaidSum.multiply(user.getPercent()).divide(BigDecimal.valueOf(100), RoundingMode.HALF_UP);
+        if (isUserManager) {
+            model.addAttribute("users", userService.getAllUsersSortedByLogin());
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("invoices", invoices);
-        model.addAttribute("totalSalary", totalSalary);
-        model.addAttribute("dataMissing", false);
+        model.addAttribute("salaryData", salaryData);
+        model.addAttribute("columns", visibleColumns);
+        model.addAttribute("selectedUsername", viewUser);
 
         return "salary";
     }
