@@ -19,4 +19,7 @@ public class SalaryParseSetting {
 
     @Column(name = "date_col_index", nullable = false)
     private int dateColIndex;
+
+    @Column(name = "start_row", nullable = false)
+    private int startRow;
 }

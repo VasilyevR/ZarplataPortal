@@ -68,10 +68,12 @@ public class SalaryService {
         Map<String, String> colorMap = colorMappingRepository.findAll().stream()
                 .collect(Collectors.toMap(ColorMapping::getExcelArgbHex, ColorMapping::getHtmlColorCode, (a, b) -> a));
         
-        int dateColIndex = salaryParseSettingRepository.findAll().stream()
+        SalaryParseSetting settings = salaryParseSettingRepository.findAll().stream()
                 .findFirst()
-                .map(SalaryParseSetting::getDateColIndex)
-                .orElse(0);
+                .orElse(new SalaryParseSetting());
+
+        int dateColIndex = settings.getDateColIndex();
+        int startRow = settings.getStartRow();
 
         List<SalaryMonthDTO> result = new ArrayList<>();
         
@@ -79,7 +81,7 @@ public class SalaryService {
             Sheet sheet = workbook.getSheetAt(0);
             SalaryMonthDTO currentMonth = null;
 
-            for (int i = 0; i <= sheet.getLastRowNum(); i++) {
+            for (int i = startRow; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
@@ -93,7 +95,7 @@ public class SalaryService {
 
                 if (currentMonth == null) {
                     Integer year = null;
-                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\b(20\\d{2})\\b").matcher(dateVal);
+                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(20\\d{2})").matcher(dateVal);
                     if (matcher.find()) {
                         year = Integer.parseInt(matcher.group(1));
                     }
