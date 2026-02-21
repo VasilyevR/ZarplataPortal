@@ -7,8 +7,10 @@ import og.portal.zarplata.dto.SalaryMonthDTO;
 import og.portal.zarplata.dto.SalaryRowDTO;
 import og.portal.zarplata.model.ColorMapping;
 import og.portal.zarplata.model.SalaryColumnMapping;
+import og.portal.zarplata.model.SalaryParseSetting;
 import og.portal.zarplata.repository.ColorMappingRepository;
 import og.portal.zarplata.repository.SalaryColumnMappingRepository;
+import og.portal.zarplata.repository.SalaryParseSettingRepository;
 import og.portal.zarplata.service.excel.ExcelHelperService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -35,6 +37,7 @@ public class SalaryService {
 
     private final SalaryColumnMappingRepository columnMappingRepository;
     private final ColorMappingRepository colorMappingRepository;
+    private final SalaryParseSettingRepository salaryParseSettingRepository;
 
     @SuppressWarnings("unchecked")
     public List<SalaryMonthDTO> getSalaryData(String username, HttpSession session) {
@@ -64,6 +67,11 @@ public class SalaryService {
         List<SalaryColumnMapping> mappings = columnMappingRepository.findAll();
         Map<String, String> colorMap = colorMappingRepository.findAll().stream()
                 .collect(Collectors.toMap(ColorMapping::getExcelArgbHex, ColorMapping::getHtmlColorCode, (a, b) -> a));
+        
+        int dateColIndex = salaryParseSettingRepository.findAll().stream()
+                .findFirst()
+                .map(SalaryParseSetting::getDateColIndex)
+                .orElse(0);
 
         List<SalaryMonthDTO> result = new ArrayList<>();
         
@@ -75,26 +83,26 @@ public class SalaryService {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                Cell firstCell = row.getCell(0);
-                String firstVal = ExcelHelperService.getCellStringValue(firstCell);
+                Cell dateCell = row.getCell(dateColIndex);
+                String dateVal = ExcelHelperService.getCellStringValue(dateCell);
 
-                if (firstVal.isEmpty()) {
+                if (dateVal.isEmpty()) {
                     currentMonth = null;
                     continue;
                 }
 
                 if (currentMonth == null) {
                     Integer year = null;
-                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\b(20\\d{2})\\b").matcher(firstVal);
+                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\b(20\\d{2})\\b").matcher(dateVal);
                     if (matcher.find()) {
                         year = Integer.parseInt(matcher.group(1));
                     }
                     
-                    currentMonth = new SalaryMonthDTO(firstVal, year, BigDecimal.ZERO, new ArrayList<>());
+                    currentMonth = new SalaryMonthDTO(dateVal, year, BigDecimal.ZERO, new ArrayList<>());
                     result.add(currentMonth);
-                    log.trace("SalaryService: Found new month block: {}", firstVal);
+                    log.trace("SalaryService: Found new month block: {}", dateVal);
                     
-                    if (ExcelHelperService.getCellStringValue(row.getCell(1)).isEmpty()) continue;
+                    if (ExcelHelperService.getCellStringValue(row.getCell(dateColIndex + 1)).isEmpty()) continue;
                 }
 
                 SalaryRowDTO rowDTO = new SalaryRowDTO(new HashMap<>(), new HashMap<>());
