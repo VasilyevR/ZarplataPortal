@@ -120,10 +120,13 @@ public class SalaryService {
             return null;
         }
 
-        Matcher matcher = Pattern.compile("(20\\d{2})").matcher(dateVal);
+        Pattern pattern = Pattern.compile("^\\s*([А-ЯЁA-Z]+)\\s+(20\\d{2})", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+        Matcher matcher = pattern.matcher(dateVal);
         if (matcher.find()) {
-            int year = Integer.parseInt(matcher.group(1));
-            return new SalaryMonthDTO(dateVal, year, BigDecimal.ZERO, new ArrayList<>());
+            String monthName = matcher.group(1).toUpperCase();
+            int year = Integer.parseInt(matcher.group(2));
+
+            return new SalaryMonthDTO(monthName, year, BigDecimal.ZERO, new ArrayList<>());
         }
         return null;
     }
@@ -137,7 +140,13 @@ public class SalaryService {
             String cellValue = ExcelHelperService.getCellStringValue(cell);
 
             if (!cellValue.isEmpty()) {
-                hasData = true;
+                if (mapping.isCurrency()) {
+                    if (!isZeroCurrency(cellValue)) {
+                        hasData = true;
+                    }
+                } else {
+                    hasData = true;
+                }
             }
 
             if (mapping.isSalary()) {
@@ -160,6 +169,17 @@ public class SalaryService {
         }
 
         return hasData ? Optional.of(rowDTO) : Optional.empty();
+    }
+
+    private boolean isZeroCurrency(String value) {
+        if (value == null || value.isEmpty()) return true;
+        String clean = value.replaceAll("[^\\d.,]", "").replace(",", ".");
+        if (clean.isEmpty()) return true;
+        try {
+            return new BigDecimal(clean).compareTo(BigDecimal.ZERO) == 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private void updateTotalAmount(SalaryMonthDTO currentMonth, String cellValue) {
