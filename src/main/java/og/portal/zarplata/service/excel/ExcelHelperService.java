@@ -80,6 +80,10 @@ public final class ExcelHelperService {
     }
 
     public static String getCellColorHex(Cell cell) {
+        if (cell == null || cell.getCellStyle() == null) {
+            return null;
+        }
+
         CellStyle style = cell.getCellStyle();
         Color color = style.getFillForegroundColorColor();
 
