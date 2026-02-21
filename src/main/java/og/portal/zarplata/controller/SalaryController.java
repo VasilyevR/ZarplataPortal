@@ -41,16 +41,26 @@ public class SalaryController {
         
         String fullUsername = authentication.getName();
         String currentLogin = DataCleaningService.extractLogin(fullUsername);
+        
+        log.info("SalaryController: Request received from user '{}' (login: '{}')", fullUsername, currentLogin);
 
         boolean isUserManager = securityService.hasRole(AppRole.USER_MANAGER);
 
         String viewUser = currentLogin;
         if (isUserManager && targetUser != null && !targetUser.isEmpty()) {
+            log.info("SalaryController: User '{}' is a USER_MANAGER and requested data for '{}'", currentLogin, targetUser);
             viewUser = targetUser;
+        } else if (targetUser != null && !targetUser.isEmpty()) {
+            log.warn("SalaryController: User '{}' tried to access data for '{}' but is NOT a USER_MANAGER. Showing own data.", currentLogin, targetUser);
         }
 
+        log.debug("SalaryController: Fetching user data for login '{}'", viewUser);
         UserDTO user = userService.getUserByLogin(viewUser);
+        
+        log.debug("SalaryController: Fetching salary data for login '{}'", user.getLogin());
         List<SalaryMonthDTO> salaryData = salaryService.getSalaryData(user.getLogin(), session);
+        log.info("SalaryController: Retrieved {} months of salary data for '{}'", salaryData.size(), user.getLogin());
+
         List<SalaryColumnMappingDTO> visibleColumns = salaryMappingService.getVisibleColumns();
 
         if (isUserManager) {

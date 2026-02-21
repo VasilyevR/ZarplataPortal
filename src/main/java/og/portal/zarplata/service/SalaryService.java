@@ -40,19 +40,26 @@ public class SalaryService {
     public List<SalaryMonthDTO> getSalaryData(String username, HttpSession session) {
         String cacheKey = "salary_cache_" + username;
         List<SalaryMonthDTO> cached = (List<SalaryMonthDTO>) session.getAttribute(cacheKey);
-        if (cached != null) return cached;
+        if (cached != null) {
+            log.debug("SalaryService: Returning cached salary data for user '{}'", username);
+            return cached;
+        }
 
+        log.info("SalaryService: Parsing salary file for user '{}'", username);
         List<SalaryMonthDTO> data = parseSalaryFile(username);
         session.setAttribute(cacheKey, data);
+        log.debug("SalaryService: Cached salary data for user '{}' ({} months)", username, data.size());
         return data;
     }
 
     private List<SalaryMonthDTO> parseSalaryFile(String username) {
         File file = new File(shareFolderPath + salaryFolderPath, username + ".xlsx");
         if (!file.exists()) {
-            log.warn("Salary file not found for user: {}", username);
+            log.warn("SalaryService: Salary file not found for user: {} (Path: {})", username, file.getAbsolutePath());
             return Collections.emptyList();
         }
+
+        log.debug("SalaryService: Reading file: {}", file.getAbsolutePath());
 
         List<SalaryColumnMapping> mappings = columnMappingRepository.findAll();
         Map<String, String> colorMap = colorMappingRepository.findAll().stream()
@@ -85,6 +92,8 @@ public class SalaryService {
                     
                     currentMonth = new SalaryMonthDTO(firstVal, year, BigDecimal.ZERO, new ArrayList<>());
                     result.add(currentMonth);
+                    log.trace("SalaryService: Found new month block: {}", firstVal);
+                    
                     if (ExcelHelperService.getCellStringValue(row.getCell(1)).isEmpty()) continue;
                 }
 
@@ -100,7 +109,7 @@ public class SalaryService {
                                 currentMonth.setTotalAmount(currentMonth.getTotalAmount().add(new java.math.BigDecimal(cleanValue)));
                             }
                         } catch (Exception e) {
-                            log.debug("Failed to parse salary value from cell: {}", cellValue);
+                            log.debug("SalaryService: Failed to parse salary value from cell: {}", cellValue);
                         }
                     }
 
@@ -117,7 +126,7 @@ public class SalaryService {
                 currentMonth.getRows().add(rowDTO);
             }
         } catch (IOException e) {
-            log.error("Error parsing salary file for user " + username, e);
+            log.error("SalaryService: Error parsing salary file for user " + username, e);
         }
 
         return result;
