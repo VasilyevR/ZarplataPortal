@@ -2,6 +2,7 @@ package og.portal.zarplata.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import og.portal.zarplata.enums.ColumnAlignment;
 
 @Getter
 @Setter
@@ -31,4 +32,8 @@ public class SalaryColumnMapping {
 
     @Column(name = "is_currency", nullable = false)
     private boolean currency;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "alignment")
+    private ColumnAlignment alignment;
 }

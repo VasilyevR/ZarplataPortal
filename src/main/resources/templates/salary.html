@@ -12,12 +12,12 @@
         <div sec:authorize="hasAuthority('USER_MANAGER')" class="col-md-4">
             <form th:action="@{/salary}" method="get" class="input-group">
                 <span class="input-group-text" th:text="#{salary.select.user}">User:</span>
-                &lt;select name="user" class="form-select" onchange="this.form.submit()">
+                <select name="user" class="form-select" onchange="this.form.submit()">
                     <option th:each="u : ${users}" 
                             th:value="${u.login}" 
                             th:text="${u.login}" 
                             th:selected="${u.login == selectedUsername}"></option>
-                &lt;/select>
+                </select>
             </form>
         </div>
     </div>
@@ -57,14 +57,19 @@
                         <table class="table table-hover table-bordered mb-0 small">
                             <thead class="table-light">
                                 <tr>
-                                    <th th:each="col : ${columns}" th:text="${col.columnName}">Column</th>
+                                    <th th:each="col : ${columns}"
+                                        th:text="${col.columnName}"
+                                        th:classappend="${col.alignmentClass}">
+                                        Column
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr th:each="row : ${month.rows}">
                                     <td th:each="col : ${columns}" 
                                         th:text="${row.columnValues.get(col.excelColIndex)}"
-                                        th:style="${row.columnColors.containsKey(col.excelColIndex)} ? 'background-color: ' + ${row.columnColors.get(col.excelColIndex)} : ''">
+                                        th:style="${row.columnColors.containsKey(col.excelColIndex)} ? 'background-color: ' + ${row.columnColors.get(col.excelColIndex)} : ''"
+                                        th:classappend="${col.alignmentClass}">
                                     </td>
                                 </tr>
                             </tbody>
