@@ -57,7 +57,7 @@ public class PurchaseOrderService {
                         break;
                     }
 
-                    if (shouldSkipRow(row, parseSetting, workbook)) {
+                    if (shouldSkipRow(row, parseSetting)) {
                         log.info("Row {}: Item number column has color, skipping.", i + 1);
                         continue;
                     }
@@ -65,7 +65,7 @@ public class PurchaseOrderService {
                     String article = getArticle(row, articleCell, parseSetting);
                     int quantity = getQuantity(row, parseSetting);
 
-                    Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor, workbook);
+                    Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor);
 
                     if (currentSupplier.isPresent()) {
                         aggregatedData.computeIfAbsent(currentSupplier.get(), k -> new LinkedHashMap<>())
@@ -107,13 +107,13 @@ public class PurchaseOrderService {
         return articleCell == null || articleCell.getCellType() == CellType.BLANK || articleCell.getCellType() == CellType.ERROR;
     }
 
-    private boolean shouldSkipRow(Row row, InvoiceParseSetting parseSetting, Workbook workbook) {
+    private boolean shouldSkipRow(Row row, InvoiceParseSetting parseSetting) {
         Cell itemNumberCell = row.getCell(parseSetting.getItemNumberCol());
         if (itemNumberCell == null) {
             return false;
         }
 
-        String hexColor = ExcelHelperService.getCellColorHex(itemNumberCell, workbook);
+        String hexColor = ExcelHelperService.getCellColorHex(itemNumberCell);
         
         return hexColor != null && !hexColor.equalsIgnoreCase(WHITE_COLOR);
     }
@@ -162,8 +162,8 @@ public class PurchaseOrderService {
         return DataCleaningService.trimNonDigits(ExcelHelperService.getCellStringValue(articleCell));
     }
 
-    private Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor, Workbook workbook) {
-        String argbHex = ExcelHelperService.getCellColorHex(articleCell, workbook);
+    private Optional<SupplierSetting> getCurrentSupplier(Cell articleCell, SupplierSetting defaultSupplier, int i, Map<String, SupplierSetting> supplierByColor) {
+        String argbHex = ExcelHelperService.getCellColorHex(articleCell);
         
         if (argbHex == null) {
             log.info("Row {}: No fill color found. Using default supplier.", i + 1);

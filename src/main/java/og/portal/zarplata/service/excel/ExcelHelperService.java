@@ -67,7 +67,7 @@ public final class ExcelHelperService {
         }
     }
 
-    public static String getCellColorHex(Cell cell, Workbook workbook) {
+    public static String getCellColorHex(Cell cell) {
         CellStyle style = cell.getCellStyle();
         Color color = style.getFillForegroundColorColor();
 

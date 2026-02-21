@@ -28,7 +28,7 @@ public class SalaryExcelParser {
 
             Sheet sheet = workbook.getSheetAt(0);
             for (Row row : sheet) {
-                if (row.getRowNum() == 0) continue; // Skip header
+                if (row.getRowNum() == 0) continue;
 
                 String invoiceNumber = ExcelHelperService.getCellStringValue(row.getCell(0));
                 if (invoiceNumber == null || invoiceNumber.trim().isEmpty()) {
