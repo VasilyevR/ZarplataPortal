@@ -36,4 +36,15 @@ public final class DataCleaningService {
         }
         return text.replaceAll("^\\D+|\\D+$", "");
     }
+
+    public static String extractLogin(String fullUsername) {
+        if (fullUsername == null) {
+            return null;
+        }
+        int backslashIndex = fullUsername.lastIndexOf('\\');
+        if (backslashIndex != -1) {
+            return fullUsername.substring(backslashIndex + 1);
+        }
+        return fullUsername;
+    }
 }

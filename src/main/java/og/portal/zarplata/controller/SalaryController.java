@@ -11,6 +11,7 @@ import og.portal.zarplata.service.SecurityService;
 import og.portal.zarplata.service.SalaryMappingService;
 import og.portal.zarplata.service.SalaryService;
 import og.portal.zarplata.service.UserService;
+import og.portal.zarplata.service.util.DataCleaningService;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -38,7 +39,9 @@ public class SalaryController {
                              HttpSession session,
                              @RequestParam(value = "user", required = false) String targetUser) {
         
-        String currentLogin = authentication.getName();
+        String fullUsername = authentication.getName();
+        String currentLogin = DataCleaningService.extractLogin(fullUsername);
+
         boolean isUserManager = securityService.hasRole(AppRole.USER_MANAGER);
 
         String viewUser = currentLogin;
