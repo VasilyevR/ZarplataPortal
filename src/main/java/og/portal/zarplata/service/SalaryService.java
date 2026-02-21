@@ -23,6 +23,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -86,64 +88,88 @@ public class SalaryService {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                Cell dateCell = row.getCell(dateColIndex);
-                String dateVal = ExcelHelperService.getCellStringValue(dateCell);
-
-                if (dateVal.isEmpty()) {
-                    currentMonth = null;
+                SalaryMonthDTO newMonth = tryParseMonthHeader(row, dateColIndex);
+                if (newMonth != null) {
+                    currentMonth = newMonth;
+                    result.add(currentMonth);
+                    log.trace("SalaryService: Found new month block: {}", currentMonth.getMonthName());
                     continue;
                 }
 
                 if (currentMonth == null) {
-                    Integer year = null;
-                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(20\\d{2})").matcher(dateVal);
-                    if (matcher.find()) {
-                        year = Integer.parseInt(matcher.group(1));
-                    }
-                    
-                    currentMonth = new SalaryMonthDTO(dateVal, year, BigDecimal.ZERO, new ArrayList<>());
-                    result.add(currentMonth);
-                    log.trace("SalaryService: Found new month block: {}", dateVal);
-                    
-                    if (ExcelHelperService.getCellStringValue(row.getCell(dateColIndex + 1)).isEmpty()) continue;
+                    continue;
                 }
 
-                SalaryRowDTO rowDTO = new SalaryRowDTO(new HashMap<>(), new HashMap<>());
-                for (SalaryColumnMapping mapping : mappings) {
-                    Cell cell = row.getCell(mapping.getExcelColIndex());
-                    String cellValue = ExcelHelperService.getCellStringValue(cell);
-
-                    if (mapping.isSalary()) {
-                        try {
-                            String cleanValue = cellValue.replaceAll("[^\\d.,]", "").replace(",", ".");
-                            if (!cleanValue.isEmpty()) {
-                                currentMonth.setTotalAmount(currentMonth.getTotalAmount().add(new java.math.BigDecimal(cleanValue)));
-                            }
-                        } catch (Exception e) {
-                            log.debug("SalaryService: Failed to parse salary value from cell: {}", cellValue);
-                        }
-                    }
-
-                    if (mapping.isVisible()) {
-                        if (mapping.isCurrency()) {
-                            cellValue = DataCleaningService.formatCurrency(cellValue);
-                        }
-                        rowDTO.getColumnValues().put(mapping.getExcelColIndex(), cellValue);
-                        
-                        if (mapping.isUseExcelColor()) {
-                            String excelColor = ExcelHelperService.getCellColorHex(cell);
-                            if (excelColor != null && colorMap.containsKey(excelColor)) {
-                                rowDTO.getColumnColors().put(mapping.getExcelColIndex(), colorMap.get(excelColor));
-                            }
-                        }
-                    }
+                Optional<SalaryRowDTO> rowDTO = parseDataRow(row, mappings, colorMap, currentMonth);
+                if (rowDTO.isPresent()) {
+                    currentMonth.getRows().add(rowDTO.get());
                 }
-                currentMonth.getRows().add(rowDTO);
             }
         } catch (IOException e) {
             log.error("SalaryService: Error parsing salary file for user " + username, e);
         }
 
         return result;
+    }
+
+    private SalaryMonthDTO tryParseMonthHeader(Row row, int dateColIndex) {
+        Cell dateCell = row.getCell(dateColIndex);
+        String dateVal = ExcelHelperService.getCellStringValue(dateCell);
+
+        if (dateVal.isEmpty()) {
+            return null;
+        }
+
+        Matcher matcher = Pattern.compile("(20\\d{2})").matcher(dateVal);
+        if (matcher.find()) {
+            int year = Integer.parseInt(matcher.group(1));
+            return new SalaryMonthDTO(dateVal, year, BigDecimal.ZERO, new ArrayList<>());
+        }
+        return null;
+    }
+
+    private Optional<SalaryRowDTO> parseDataRow(Row row, List<SalaryColumnMapping> mappings, Map<String, String> colorMap, SalaryMonthDTO currentMonth) {
+        SalaryRowDTO rowDTO = new SalaryRowDTO(new HashMap<>(), new HashMap<>());
+        boolean hasData = false;
+
+        for (SalaryColumnMapping mapping : mappings) {
+            Cell cell = row.getCell(mapping.getExcelColIndex());
+            String cellValue = ExcelHelperService.getCellStringValue(cell);
+
+            if (!cellValue.isEmpty()) {
+                hasData = true;
+            }
+
+            if (mapping.isSalary()) {
+                updateTotalAmount(currentMonth, cellValue);
+            }
+
+            if (mapping.isVisible()) {
+                if (mapping.isCurrency()) {
+                    cellValue = DataCleaningService.formatCurrency(cellValue);
+                }
+                rowDTO.getColumnValues().put(mapping.getExcelColIndex(), cellValue);
+
+                if (mapping.isUseExcelColor()) {
+                    String excelColor = ExcelHelperService.getCellColorHex(cell);
+                    if (excelColor != null && colorMap.containsKey(excelColor)) {
+                        rowDTO.getColumnColors().put(mapping.getExcelColIndex(), colorMap.get(excelColor));
+                    }
+                }
+            }
+        }
+
+        return hasData ? Optional.of(rowDTO) : Optional.empty();
+    }
+
+    private void updateTotalAmount(SalaryMonthDTO currentMonth, String cellValue) {
+        try {
+            String cleanValue = cellValue.replaceAll("[^\\d.,]", "").replace(",", ".");
+            if (!cleanValue.isEmpty()) {
+                currentMonth.setTotalAmount(currentMonth.getTotalAmount().add(new BigDecimal(cleanValue)));
+            }
+        } catch (Exception e) {
+            log.debug("SalaryService: Failed to parse salary value from cell: {}", cellValue);
+        }
     }
 }
