@@ -42,7 +42,7 @@
                             <span th:if="${month.year != null}" th:text="', ' + ${month.year}">, 2026</span>
                         </strong>
                         <span class="badge bg-success rounded-pill">
-                            <span th:text="${#numbers.formatDecimal(month.totalAmount, 1, 'WHITESPACE', 2, 'COMMA')}">0,00</span> 
+                            <span th:text="${#numbers.formatDecimal(month.totalAmount, 1, 'WHITESPACE', 0, 'COMMA')}">0</span>
                             <span th:text="#{salary.currency}">rub.</span>
                         </span>
                     </div>
