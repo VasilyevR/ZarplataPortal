@@ -60,7 +60,7 @@ public class SalaryController {
         log.debug("SalaryController: Fetching salary data for login '{}'", user.getLogin());
         List<SalaryMonthDTO> salaryData = salaryService.getSalaryData(user.getLogin(), session);
         log.info("SalaryController: Retrieved {} months of salary data for '{}'", salaryData.size(), user.getLogin());
-
+        
         List<SalaryColumnMappingDTO> visibleColumns = salaryMappingService.getVisibleColumns();
 
         if (isUserManager) {
@@ -71,6 +71,7 @@ public class SalaryController {
         model.addAttribute("salaryData", salaryData);
         model.addAttribute("columns", visibleColumns);
         model.addAttribute("selectedUsername", viewUser);
+        model.addAttribute("isUserManager", isUserManager);
 
         return "salary";
     }
