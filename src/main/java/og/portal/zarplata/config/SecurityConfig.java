@@ -53,6 +53,9 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(final HttpSecurity http) throws Exception {
         http
+            .securityContext(securityContext -> securityContext
+                .requireExplicitSave(false)
+            )
             .authorizeHttpRequests(requests -> requests
                 .anyRequest().authenticated()
             )
