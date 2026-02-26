@@ -1,5 +1,10 @@
 package og.portal.zarplata.config;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,9 +13,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-
+import org.springframework.web.filter.OncePerRequestFilter;
 import waffle.spring.NegotiateSecurityFilter;
 import waffle.spring.NegotiateSecurityFilterEntryPoint;
+
+import java.io.IOException;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -19,6 +27,12 @@ public class SecurityConfig {
     private final NegotiateSecurityFilter filter;
     private final NegotiateSecurityFilterEntryPoint entryPoint;
 
+    @Value("${waffle.exclude.urls:}")
+    private List<String> excludeUrls;
+
+    @Value("${security.ignoring.urls:}")
+    private String[] ignoringUrls;
+
     public SecurityConfig(NegotiateSecurityFilter filter, NegotiateSecurityFilterEntryPoint entryPoint) {
         this.filter = filter;
         this.entryPoint = entryPoint;
@@ -26,7 +40,11 @@ public class SecurityConfig {
 
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring().requestMatchers("/error", "/favicon.ico", "/css/**", "/js/**", "/images/**");
+        return (web) -> {
+            if (ignoringUrls != null && ignoringUrls.length > 0) {
+                web.ignoring().requestMatchers(ignoringUrls);
+            }
+        };
     }
 
     @Bean
@@ -35,7 +53,16 @@ public class SecurityConfig {
             .authorizeHttpRequests(requests -> requests
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(filter, BasicAuthenticationFilter.class)
+            .addFilterBefore(new OncePerRequestFilter() {
+                @Override
+                protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+                    if (excludeUrls != null && excludeUrls.contains(request.getRequestURI())) {
+                        filterChain.doFilter(request, response);
+                    } else {
+                        filter.doFilter(request, response, filterChain);
+                    }
+                }
+            }, BasicAuthenticationFilter.class)
             .exceptionHandling(handling -> handling.authenticationEntryPoint(entryPoint));
         return http.build();
     }
