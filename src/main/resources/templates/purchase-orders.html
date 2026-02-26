@@ -167,6 +167,7 @@
 
             fetch('/purchase-orders/generate', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     [csrfHeader]: csrfToken
                 },
