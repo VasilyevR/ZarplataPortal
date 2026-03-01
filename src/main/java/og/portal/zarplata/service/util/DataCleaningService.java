@@ -60,12 +60,13 @@ public final class DataCleaningService {
             String cleanValue = value.replaceAll("[^\\d.,]", "").replace(",", ".");
             if (cleanValue.isEmpty()) return value;
 
-            BigDecimal amount = new BigDecimal(cleanValue).setScale(0, RoundingMode.HALF_UP);
+            BigDecimal amount = new BigDecimal(cleanValue);
 
             DecimalFormatSymbols symbols = new DecimalFormatSymbols(new Locale("ru", "RU"));
             symbols.setGroupingSeparator(' ');
+            symbols.setDecimalSeparator(',');
 
-            DecimalFormat decimalFormat = new DecimalFormat("#,##0", symbols);
+            DecimalFormat decimalFormat = new DecimalFormat("#,##0.00", symbols);
             return decimalFormat.format(amount) + "р.";
         } catch (Exception e) {
             return value;
