@@ -19,6 +19,15 @@ public final class WindowsExplorerComparator implements Comparator<String> {
             char c1 = s1.charAt(i1);
             char c2 = s2.charAt(i2);
 
+            if (c1 == '-' || c1 == '\'') {
+                i1++;
+                continue;
+            }
+            if (c2 == '-' || c2 == '\'') {
+                i2++;
+                continue;
+            }
+
             if (Character.isDigit(c1) && Character.isDigit(c2)) {
                 String num1Str = extractNumber(s1, i1);
                 String num2Str = extractNumber(s2, i2);
@@ -42,7 +51,14 @@ public final class WindowsExplorerComparator implements Comparator<String> {
             }
         }
 
-        return len1 - len2;
+        if (i1 >= len1 && i2 >= len2) {
+             return s1.compareTo(s2);
+        }
+
+        if (i1 >= len1) return -1;
+        if (i2 >= len2) return 1;
+
+        return 0;
     }
 
     private String extractNumber(String s, int start) {
