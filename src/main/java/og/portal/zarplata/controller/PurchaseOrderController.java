@@ -2,7 +2,9 @@ package og.portal.zarplata.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import og.portal.zarplata.dto.FileNodeDTO;
 import og.portal.zarplata.dto.GeneratedFileDTO;
+import og.portal.zarplata.dto.PurchaseOrderRequestDTO;
 import og.portal.zarplata.dto.SupplierSettingDTO;
 import og.portal.zarplata.enums.AppRole;
 import og.portal.zarplata.service.PurchaseOrderService;
@@ -15,7 +17,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -46,12 +47,24 @@ public class PurchaseOrderController {
         return "purchase-orders";
     }
 
+    @GetMapping("/files")
+    @ResponseBody
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<FileNodeDTO>> listFiles(@RequestParam(required = false) String path) {
+        try {
+            List<FileNodeDTO> files = purchaseOrderService.listFiles(path);
+            return ResponseEntity.ok(files);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @PostMapping("/generate")
     @ResponseBody
     @PreAuthorize("@securityService.hasRole('ORDER_GENERATOR')")
-    public ResponseEntity<List<String>> generateOrders(@RequestParam("files") MultipartFile[] files, HttpSession session) {
+    public ResponseEntity<List<String>> generateOrders(@RequestBody PurchaseOrderRequestDTO request, HttpSession session) {
         try {
-            List<GeneratedFileDTO> generatedFiles = purchaseOrderService.generatePurchaseOrders(files);
+            List<GeneratedFileDTO> generatedFiles = purchaseOrderService.generatePurchaseOrders(request.getCurrentPath(), request.getFileNames());
             session.setAttribute(SESSION_FILES_KEY, generatedFiles);
 
             List<String> fileNames = generatedFiles.stream()
@@ -61,6 +74,8 @@ public class PurchaseOrderController {
             return ResponseEntity.ok(fileNames);
         } catch (IOException e) {
             return ResponseEntity.status(500).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 

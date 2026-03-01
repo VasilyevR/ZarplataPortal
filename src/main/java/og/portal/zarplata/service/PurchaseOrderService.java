@@ -2,7 +2,9 @@ package og.portal.zarplata.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import og.portal.zarplata.dto.FileNodeDTO;
 import og.portal.zarplata.dto.GeneratedFileDTO;
+import og.portal.zarplata.dto.NamedInputStreamDTO;
 import og.portal.zarplata.model.InvoiceParseSetting;
 import og.portal.zarplata.model.SupplierSetting;
 import og.portal.zarplata.repository.InvoiceParseSettingRepository;
@@ -10,12 +12,14 @@ import og.portal.zarplata.repository.SupplierSettingRepository;
 import og.portal.zarplata.service.excel.OrderGeneratorService;
 import og.portal.zarplata.service.excel.ExcelHelperService;
 import og.portal.zarplata.service.util.DataCleaningService;
+import og.portal.zarplata.service.util.PurchaseOrderFileHelper;
 import og.portal.zarplata.service.util.WindowsExplorerComparator;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
@@ -27,10 +31,25 @@ public class PurchaseOrderService {
 
     private static final String WHITE_COLOR = "FFFFFFFF";
 
+    @Value("${app.share.folder.path}")
+    private String shareFolderPath;
+
+    @Value("${app.purchase.folder.path}")
+    private String purchaseFolderPath;
+
     private final SupplierSettingRepository supplierSettingRepository;
     private final InvoiceParseSettingRepository invoiceParseSettingRepository;
 
-    public List<GeneratedFileDTO> generatePurchaseOrders(MultipartFile[] files) throws IOException {
+    public List<FileNodeDTO> listFiles(String relativePath) {
+        return PurchaseOrderFileHelper.listFiles(shareFolderPath + purchaseFolderPath, relativePath);
+    }
+
+    public List<GeneratedFileDTO> generatePurchaseOrders(String currentPath, List<String> fileNames) throws IOException {
+        List<File> filesToProcess = PurchaseOrderFileHelper.resolveFiles(shareFolderPath + purchaseFolderPath, currentPath, fileNames);
+        return processFiles(filesToProcess);
+    }
+
+    List<GeneratedFileDTO> processInputStreams(List<NamedInputStreamDTO> inputStreams) throws IOException {
         InvoiceParseSetting parseSetting = invoiceParseSettingRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException("Invoice parsing settings not found in DB"));
 
@@ -40,11 +59,12 @@ public class PurchaseOrderService {
 
         Map<SupplierSetting, Map<String, Integer>> aggregatedData = new LinkedHashMap<>();
 
-        List<MultipartFile> sortedFiles = sortFilesByName(files);
+        WindowsExplorerComparator comparator = new WindowsExplorerComparator();
+        inputStreams.sort((s1, s2) -> comparator.compare(s1.getName(), s2.getName()));
 
-        for (MultipartFile file : sortedFiles) {
-            log.info("Processing file: {}", file.getOriginalFilename());
-            try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+        for (NamedInputStreamDTO namedStream : inputStreams) {
+            log.info("Processing file: {}", namedStream.getName());
+            try (InputStream is = namedStream.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
                 Sheet sheet = workbook.getSheetAt(0);
                 for (int i = parseSetting.getStartRow(); i <= sheet.getLastRowNum(); i++) {
                     Row row = sheet.getRow(i);
@@ -53,7 +73,7 @@ public class PurchaseOrderService {
                     Cell articleCell = row.getCell(parseSetting.getArticleCol());
 
                     if (isInvoiceEnded(articleCell)) {
-                        log.info("Found empty article cell at row {}, stopping processing for file {}", i + 1, file.getOriginalFilename());
+                        log.info("Found empty article cell at row {}, stopping processing for file {}", i + 1, namedStream.getName());
                         break;
                     }
 
@@ -67,10 +87,8 @@ public class PurchaseOrderService {
 
                     Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor);
 
-                    if (currentSupplier.isPresent()) {
-                        aggregatedData.computeIfAbsent(currentSupplier.get(), k -> new LinkedHashMap<>())
-                                .merge(article, quantity, Integer::sum);
-                    }
+                    currentSupplier.ifPresent(supplierSetting -> aggregatedData.computeIfAbsent(supplierSetting, k -> new LinkedHashMap<>())
+                            .merge(article, quantity, Integer::sum));
                 }
             }
         }
@@ -78,18 +96,9 @@ public class PurchaseOrderService {
         return createGeneratedFiles(aggregatedData);
     }
 
-    private List<MultipartFile> sortFilesByName(MultipartFile[] files) {
-        List<MultipartFile> fileList = new ArrayList<>(List.of(files));
-        WindowsExplorerComparator comparator = new WindowsExplorerComparator();
-        
-        fileList.sort((f1, f2) -> {
-            String name1 = f1.getOriginalFilename();
-            String name2 = f2.getOriginalFilename();
-            if (name1 == null) name1 = "";
-            if (name2 == null) name2 = "";
-            return comparator.compare(name1, name2);
-        });
-        return fileList;
+    private List<GeneratedFileDTO> processFiles(List<File> files) throws IOException {
+        List<NamedInputStreamDTO> streams = PurchaseOrderFileHelper.createInputStreams(files);
+        return processInputStreams(streams);
     }
 
     private Map<String, SupplierSetting> getSuppliers() {

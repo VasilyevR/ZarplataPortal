@@ -37,16 +37,29 @@
     </div>
 
     <div sec:authorize="isAuthenticated()" class="mt-5">
-        <h2 th:text="#{po.upload.title}">Upload Invoices</h2>
-        <p th:text="#{po.upload.desc}">Drag and drop invoice files (.xlsx) here or click to select.</p>
+        <h2 th:text="#{po.upload.title}">Select Invoices</h2>
+        <p th:text="#{po.upload.desc}">Navigate through folders and select invoice files (.xlsx) to process.</p>
 
-        <div id="drop-area" class="p-5 text-center border border-2 border-primary border-dashed rounded bg-light text-primary fs-4 mb-3" style="cursor: pointer; border-style: dashed !important;">
-            <span th:text="#{po.drop.here}">Drop files here</span>
-            <br>
-            <i class="bi bi-cloud-upload fs-1"></i>
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <button id="btn-up" class="btn btn-secondary btn-sm me-2" disabled>
+                        <i class="bi bi-arrow-up"></i> <span th:text="#{po.button.up}">Up</span>
+                    </button>
+                    <span id="current-path" class="fw-bold">/</span>
+                </div>
+                <div>
+                    <button id="btn-select-all" class="btn btn-outline-primary btn-sm me-1" th:text="#{po.button.select.all}">Select All</button>
+                    <button id="btn-deselect-all" class="btn btn-outline-secondary btn-sm" th:text="#{po.button.deselect.all}">Deselect All</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="file-browser-list">
+                    <!-- File list will be populated here -->
+                    <div class="text-center p-3 text-muted" th:text="#{po.loading}">Loading...</div>
+                </div>
+            </div>
         </div>
-        <div id="file-list" class="mb-3"></div>
-        <input type="file" id="file-input" multiple accept=".xlsx" style="display: none;">
 
         <div th:if="${canGenerate}">
             <button id="submit-button" class="btn btn-primary btn-lg" th:text="#{po.button.generate}">Generate</button>
@@ -73,84 +86,157 @@
 <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 
 <script th:inline="javascript">
-    const dropArea = document.getElementById('drop-area');
-    const fileInput = document.getElementById('file-input');
-    const fileListDiv = document.getElementById('file-list');
+    const fileBrowserList = document.getElementById('file-browser-list');
+    const currentPathSpan = document.getElementById('current-path');
+    const btnUp = document.getElementById('btn-up');
+    const btnSelectAll = document.getElementById('btn-select-all');
+    const btnDeselectAll = document.getElementById('btn-deselect-all');
     const submitButton = document.getElementById('submit-button');
     const spinner = document.getElementById('spinner');
     const resultArea = document.getElementById('result-area');
     const generatedFilesList = document.getElementById('generated-files-list');
-    let fileStore = [];
 
-    const msgSelectedFiles = /*[[#{po.selected.files}]]*/ 'Selected files';
     const msgAlertSelectFile = /*[[#{po.alert.select.file}]]*/ 'Please select at least one file.';
     const msgAlertError = /*[[#{po.alert.error}]]*/ 'An error occurred while generating files.';
+    const msgLoading = /*[[#{po.loading}]]*/ 'Loading...';
+    const msgEmptyDirectory = /*[[#{po.empty.directory}]]*/ 'Empty directory';
+    const msgErrorLoading = /*[[#{po.error.loading}]]*/ 'Error loading files';
+    const msgNoFilesGenerated = /*[[#{po.no.files.generated}]]*/ 'No files were generated. Check if invoices contain valid data.';
+    const msgDownload = /*[[#{po.download}]]*/ 'Download';
 
     const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
     const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
 
-    if (dropArea) {
-        dropArea.addEventListener('click', () => fileInput.click());
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, preventDefaults, false);
-        });
-    }
+    let currentPath = "";
+    let currentFiles = [];
+    let selectedFiles = new Set();
 
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+    function loadFiles(path) {
+        fileBrowserList.innerHTML = `<div class="text-center p-3 text-muted">${msgLoading}</div>`;
 
-    if (dropArea) {
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropArea.addEventListener(eventName, () => {
-                dropArea.classList.add('bg-white');
-                dropArea.classList.remove('bg-light');
-            }, false);
-        });
+        const url = path ? `/purchase-orders/files?path=${encodeURIComponent(path)}` : '/purchase-orders/files';
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, () => {
-                dropArea.classList.remove('bg-white');
-                dropArea.classList.add('bg-light');
-            }, false);
-        });
-
-        dropArea.addEventListener('drop', handleDrop, false);
-    }
-
-    function handleDrop(e) {
-        handleFiles(e.dataTransfer.files);
-    }
-
-    if (fileInput) {
-        fileInput.addEventListener('change', function() {
-            handleFiles(this.files);
-        });
-    }
-
-    function handleFiles(files) {
-        fileStore = [...fileStore, ...Array.from(files).filter(f => f.name.endsWith('.xlsx'))];
-        renderFileList();
-        resultArea.style.display = 'none';
-    }
-
-    function renderFileList() {
-        fileListDiv.innerHTML = '';
-        if (fileStore.length > 0) {
-            fileListDiv.innerHTML = `<strong>${msgSelectedFiles} (${fileStore.length}):</strong>`;
-            fileStore.forEach((file, index) => {
-                const fileDiv = document.createElement('div');
-                fileDiv.className = 'p-2 bg-white border rounded mb-1 d-flex justify-content-between align-items-center';
-                fileDiv.innerHTML = `<span>${file.name}</span>`;
-                fileListDiv.appendChild(fileDiv);
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error("Failed to load files");
+                return response.json();
+            })
+            .then(files => {
+                currentFiles = files;
+                currentPath = path || "";
+                selectedFiles.clear();
+                renderFileBrowser();
+                updateNavigation();
+            })
+            .catch(error => {
+                console.error(error);
+                fileBrowserList.innerHTML = `<div class="text-center p-3 text-danger">${msgErrorLoading}</div>`;
             });
+    }
+
+    function renderFileBrowser() {
+        fileBrowserList.innerHTML = '';
+        if (currentFiles.length === 0) {
+            fileBrowserList.innerHTML = `<div class="text-center p-3 text-muted">${msgEmptyDirectory}</div>`;
+            return;
+        }
+
+        currentFiles.forEach(file => {
+            const item = document.createElement('div');
+            item.className = 'list-group-item list-group-item-action d-flex align-items-center';
+
+            if (file.directory) {
+                item.innerHTML = `
+                    <i class="bi bi-folder-fill text-warning me-3 fs-5"></i>
+                    <span class="flex-grow-1" style="cursor: pointer;">${file.name}</span>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                `;
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    loadFiles(file.path);
+                };
+                item.style.cursor = 'pointer';
+            } else {
+                const isSelected = selectedFiles.has(file.name);
+
+                const checkbox = document.createElement('input');
+                checkbox.className = 'form-check-input me-3 fs-5';
+                checkbox.type = 'checkbox';
+                checkbox.value = file.name;
+                checkbox.checked = isSelected;
+
+                const icon = document.createElement('i');
+                icon.className = 'bi bi-file-earmark-excel text-success me-2 fs-5';
+
+                const label = document.createElement('span');
+                label.className = 'form-check-label flex-grow-1';
+                label.style.cursor = 'pointer';
+                label.textContent = file.name;
+
+                item.appendChild(checkbox);
+                item.appendChild(icon);
+                item.appendChild(label);
+
+                item.onclick = (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        toggleFileSelection(file.name, checkbox.checked);
+                    }
+                };
+
+                checkbox.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFileSelection(file.name, e.target.checked);
+                };
+            }
+
+            fileBrowserList.appendChild(item);
+        });
+    }
+
+    function toggleFileSelection(fileName, isSelected) {
+        if (isSelected) {
+            selectedFiles.add(fileName);
+        } else {
+            selectedFiles.delete(fileName);
         }
     }
 
+    function updateNavigation() {
+        currentPathSpan.textContent = currentPath ? `/${currentPath}` : '/';
+
+        btnUp.disabled = !currentPath;
+
+        btnUp.onclick = () => {
+            if (!currentPath) return;
+
+            const lastSlashIndex = currentPath.lastIndexOf('/');
+            let parentPath = "";
+            if (lastSlashIndex !== -1) {
+                parentPath = currentPath.substring(0, lastSlashIndex);
+            }
+
+            loadFiles(parentPath);
+        };
+    }
+
+    btnSelectAll.addEventListener('click', () => {
+        currentFiles.forEach(file => {
+            if (!file.directory) {
+                selectedFiles.add(file.name);
+            }
+        });
+        renderFileBrowser();
+    });
+
+    btnDeselectAll.addEventListener('click', () => {
+        selectedFiles.clear();
+        renderFileBrowser();
+    });
+
     if (submitButton) {
         submitButton.addEventListener('click', () => {
-            if (fileStore.length === 0) {
+            if (selectedFiles.size === 0) {
                 alert(msgAlertSelectFile);
                 return;
             }
@@ -160,18 +246,18 @@
             resultArea.style.display = 'none';
             generatedFilesList.innerHTML = '';
 
-            const formData = new FormData();
-            fileStore.forEach(file => {
-                formData.append('files', file);
-            });
+            const requestData = {
+                currentPath: currentPath,
+                fileNames: Array.from(selectedFiles)
+            };
 
             fetch('/purchase-orders/generate', {
                 method: 'POST',
-                credentials: 'include',
                 headers: {
+                    'Content-Type': 'application/json',
                     [csrfHeader]: csrfToken
                 },
-                body: formData
+                body: JSON.stringify(requestData)
             })
                 .then(response => {
                     if (!response.ok) {
@@ -186,7 +272,7 @@
                             li.className = 'mb-2';
                             const a = document.createElement('a');
                             a.href = `/purchase-orders/download/${index}`;
-                            a.textContent = `Download ${fileName}`;
+                            a.textContent = `${msgDownload} ${fileName}`;
                             a.className = 'btn btn-outline-success btn-sm';
                             a.target = '_blank';
                             li.appendChild(a);
@@ -194,10 +280,10 @@
                         });
                         resultArea.style.display = 'block';
 
-                        fileStore = [];
-                        renderFileList();
+                        selectedFiles.clear();
+                        renderFileBrowser();
                     } else {
-                        alert("No files were generated. Check if invoices contain valid data.");
+                        alert(msgNoFilesGenerated);
                     }
                 })
                 .catch(error => {
@@ -210,6 +296,8 @@
                 });
         });
     }
+
+    loadFiles("");
 
 </script>
 

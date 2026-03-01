@@ -2,7 +2,7 @@ package og.portal.zarplata.service.util;
 
 import java.util.Comparator;
 
-public class WindowsExplorerComparator implements Comparator<String> {
+public final class WindowsExplorerComparator implements Comparator<String> {
 
     @Override
     public int compare(String s1, String s2) {
@@ -31,11 +31,11 @@ public class WindowsExplorerComparator implements Comparator<String> {
                 i1 += num1Str.length();
                 i2 += num2Str.length();
             } else {
-                c1 = Character.toUpperCase(c1);
-                c2 = Character.toUpperCase(c2);
+                char u1 = Character.toUpperCase(c1);
+                char u2 = Character.toUpperCase(c2);
 
-                if (c1 != c2) {
-                    return c1 - c2;
+                if (u1 != u2) {
+                    return u1 - u2;
                 }
                 i1++;
                 i2++;
