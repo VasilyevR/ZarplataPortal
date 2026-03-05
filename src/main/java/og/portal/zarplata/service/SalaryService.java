@@ -32,6 +32,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SalaryService {
 
+    private static final String EXCEL_EXTENSION = ".xlsx";
+    private static final Pattern MONTH_HEADER_PATTERN = Pattern.compile("^\\s*([А-ЯЁA-Z]+)\\s+(20\\d{2})", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+
     @Value("${app.share.folder.path}")
     private String shareFolderPath;
 
@@ -59,7 +62,7 @@ public class SalaryService {
     }
 
     private List<SalaryMonthDTO> parseSalaryFile(String username) {
-        File file = new File(shareFolderPath + salaryFolderPath, username + ".xlsx");
+        File file = new File(shareFolderPath + salaryFolderPath, username + EXCEL_EXTENSION);
         if (!file.exists()) {
             log.warn("SalaryService: Salary file not found for user: {} (Path: {})", username, file.getAbsolutePath());
             return Collections.emptyList();
@@ -120,8 +123,7 @@ public class SalaryService {
             return null;
         }
 
-        Pattern pattern = Pattern.compile("^\\s*([А-ЯЁA-Z]+)\\s+(20\\d{2})", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
-        Matcher matcher = pattern.matcher(dateVal);
+        Matcher matcher = MONTH_HEADER_PATTERN.matcher(dateVal);
         if (matcher.find()) {
             String monthName = matcher.group(1).toUpperCase();
             int year = Integer.parseInt(matcher.group(2));

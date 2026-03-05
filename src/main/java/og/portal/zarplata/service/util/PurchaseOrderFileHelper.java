@@ -16,6 +16,11 @@ import java.util.stream.Collectors;
 
 public final class PurchaseOrderFileHelper {
 
+    private static final String TEMP_FILE_PREFIX = "~";
+    private static final String BACKSLASH = "\\";
+    private static final String FORWARD_SLASH = "/";
+    private static final String EXCEL_EXTENSION = ".xlsx";
+
     public static List<FileNodeDTO> listFiles(String rootPathStr, String relativePath) {
         Path rootPath = Paths.get(rootPathStr);
         Path targetPath = rootPath.resolve(relativePath == null ? "" : relativePath).normalize();
@@ -37,10 +42,11 @@ public final class PurchaseOrderFileHelper {
         WindowsExplorerComparator comparator = new WindowsExplorerComparator();
 
         return Arrays.stream(files)
+                .filter(file -> !file.getName().startsWith(TEMP_FILE_PREFIX))
                 .map(file -> new FileNodeDTO(
                         file.getName(),
                         file.isDirectory(),
-                        rootPath.relativize(file.toPath()).toString().replace("\\", "/")
+                        rootPath.relativize(file.toPath()).toString().replace(BACKSLASH, FORWARD_SLASH)
                 ))
                 .sorted((f1, f2) -> {
                     if (f1.isDirectory() && !f2.isDirectory()) return -1;
@@ -61,7 +67,7 @@ public final class PurchaseOrderFileHelper {
         List<File> filesToProcess = new ArrayList<>();
         for (String fileName : fileNames) {
             File file = targetDir.resolve(fileName).toFile();
-            if (file.exists() && file.isFile() && file.getName().endsWith(".xlsx")) {
+            if (file.exists() && file.isFile() && file.getName().endsWith(EXCEL_EXTENSION)) {
                 filesToProcess.add(file);
             }
         }

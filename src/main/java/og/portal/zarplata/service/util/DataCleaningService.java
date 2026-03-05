@@ -8,6 +8,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class DataCleaningService {
+
+    private static final Pattern DIGITS_PATTERN = Pattern.compile("\\d+");
+
     private DataCleaningService() {
         throw new IllegalCallerException("DataCleaningService class cannot be instantiated");
     }
@@ -16,8 +19,7 @@ public final class DataCleaningService {
         if (text == null) {
             return "";
         }
-        Pattern pattern = Pattern.compile("\\d+");
-        Matcher matcher = pattern.matcher(text);
+        Matcher matcher = DIGITS_PATTERN.matcher(text);
 
         String lastMatch = "";
         while (matcher.find()) {
