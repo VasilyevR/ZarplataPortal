@@ -66,7 +66,7 @@ public final class PurchaseOrderFileHelper {
 
         List<File> filesToProcess = new ArrayList<>();
         for (String fileName : fileNames) {
-            File file = targetDir.resolve(fileName).toFile();
+            File file = new File(targetDir.toFile(), fileName);
             if (file.exists() && file.isFile() && file.getName().endsWith(EXCEL_EXTENSION)) {
                 filesToProcess.add(file);
             }
