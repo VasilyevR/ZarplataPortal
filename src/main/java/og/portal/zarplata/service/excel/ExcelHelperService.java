@@ -5,6 +5,8 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Slf4j
 public final class ExcelHelperService {
@@ -55,28 +57,36 @@ public final class ExcelHelperService {
     }
 
     public static BigDecimal getCellBigDecimalValue(Cell cell) {
-        if (cell == null) return BigDecimal.ZERO;
+        if (cell == null) return null;
         switch (cell.getCellType()) {
             case NUMERIC:
                 return BigDecimal.valueOf(cell.getNumericCellValue());
             case STRING:
                 try {
                     String val = cell.getStringCellValue().replace(",", ".").trim();
-                    if (val.isEmpty()) return BigDecimal.ZERO;
+                    if (val.isEmpty()) return null;
                     return new BigDecimal(val);
                 } catch (NumberFormatException e) {
                     log.warn("Failed to parse BigDecimal from string: {}", cell.getStringCellValue());
-                    return BigDecimal.ZERO;
+                    return null;
                 }
             case FORMULA:
                 try {
                     return BigDecimal.valueOf(cell.getNumericCellValue());
                 } catch (IllegalStateException e) {
-                    return BigDecimal.ZERO;
+                    return null;
                 }
             default:
-                return BigDecimal.ZERO;
+                return null;
         }
+    }
+
+    public static LocalDate getCellDateValue(Cell cell) {
+        if (cell == null) return null;
+        if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+            return cell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        }
+        return null;
     }
 
     public static String getCellColorHex(Cell cell) {

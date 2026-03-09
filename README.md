@@ -7,6 +7,7 @@ Zarplata Portal is a corporate web application designed for internal use within 
 *   **Salary Dashboard**: Employees can view their salary history parsed in real-time from personal Excel files. Data is grouped by month and year with interactive drill-down details.
 *   **On-the-fly Parsing**: Salary data is not stored in the database but parsed directly from a secure network share when a user accesses the portal. Results are cached in the user session for performance.
 *   **Purchase Order Generation**: Authorized users (e.g., managers) can upload multiple Excel invoices. The system automatically parses them, aggregates items by supplier (identified by cell background color), and generates separate order files for each supplier.
+*   **Funds Receipt**: Authorized users (Funds Receivers) can upload bank statements to automatically find and match payments in managers' salary files. The system searches for exact amount matches within the last 3 months and allows users to apply the payment date to the corresponding salary record.
 *   **Manager Overlook**: Users with elevated roles can view salary data for any employee by selecting them from a managed list.
 
 ## Technical Features

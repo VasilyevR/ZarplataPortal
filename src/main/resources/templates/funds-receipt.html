@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="#{funds.title}">Funds Receipt</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<div th:replace="layouts :: header"></div>
+
+<div class="container mt-4">
+    <h2 th:text="#{funds.title}">Funds Receipt</h2>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label for="bankSelect" class="form-label" th:text="#{funds.bank}">Bank</label>
+            <select id="bankSelect" class="form-select">
+                <option th:each="bank : ${bankNames}" th:value="${bank}" th:text="${bank}"></option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="fileInput" class="form-label" th:text="#{funds.file}">Bank Statement File</label>
+            <input type="file" id="fileInput" class="form-control">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button id="searchBtn" class="btn btn-primary" th:text="#{funds.search}">Search</button>
+        </div>
+    </div>
+
+    <table class="table table-striped" id="resultsTable">
+        <thead>
+        <tr>
+            <th th:text="#{funds.table.date}">Date</th>
+            <th th:text="#{funds.table.client}">Client (Statement)</th>
+            <th th:text="#{funds.table.amount}">Amount</th>
+            <th th:text="#{funds.table.found}">Found Client</th>
+            <th th:text="#{funds.table.order.date}">Order Date</th>
+            <th th:text="#{funds.table.manager}">Manager</th>
+            <th th:text="#{funds.table.action}">Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Results will be populated here -->
+        </tbody>
+    </table>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    var msgSave = /*[[#{funds.button.save}]]*/ 'Save';
+    var msgSaved = /*[[#{funds.button.saved}]]*/ 'Saved';
+    var msgNotFound = /*[[#{funds.not.found}]]*/ 'Not found';
+    var msgAlertSelect = /*[[#{funds.alert.select}]]*/ 'Please select a file and a bank.';
+    var msgAlertErrorSearch = /*[[#{funds.alert.error.search}]]*/ 'Error searching.';
+    var msgAlertErrorSave = /*[[#{funds.alert.error.save}]]*/ 'Error saving.';
+
+    $(document).ready(function() {
+        $('#searchBtn').click(function() {
+            var file = $('#fileInput')[0].files[0];
+            var bankName = $('#bankSelect').val();
+
+            if (!file || !bankName) {
+                alert(msgAlertSelect);
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('file', file);
+            formData.append('bankName', bankName);
+
+            $.ajax({
+                url: '/funds-receipt/search',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    var tbody = $('#resultsTable tbody');
+                    tbody.empty();
+
+                    data.forEach(function(item) {
+                        var row = $('<tr>');
+                        row.append($('<td>').text(item.date));
+                        row.append($('<td>').text(item.clientName));
+                        row.append($('<td>').text(item.amount));
+
+                        if (item.found) {
+                            var clientSelect = $('<select class="form-select">');
+                            item.possibleClients.forEach(function(client) {
+                                clientSelect.append($('<option>').text(client));
+                            });
+                            row.append($('<td>').append(clientSelect));
+
+                            row.append($('<td>').text(item.orderDate || ""));
+                            row.append($('<td>').text(item.managerLogin));
+
+                            var saveBtn = $('<button class="btn btn-success btn-sm">').text(msgSave);
+                            saveBtn.click(function() {
+                                saveItem(item, $(this));
+                            });
+                            row.append($('<td>').append(saveBtn));
+                        } else {
+                            row.append($('<td colspan="4">').text(msgNotFound));
+                        }
+
+                        tbody.append(row);
+                    });
+                },
+                error: function() {
+                    alert(msgAlertErrorSearch);
+                }
+            });
+        });
+    });
+
+    function saveItem(item, btn) {
+        var request = {
+            fileName: item.fileName,
+            rowNumber: item.rowNumber,
+            date: item.date
+        };
+
+        $.ajax({
+            url: '/funds-receipt/save',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(request),
+            success: function() {
+                btn.text(msgSaved).prop('disabled', true);
+            },
+            error: function() {
+                alert(msgAlertErrorSave);
+            }
+        });
+    }
+    /*]]>*/
+</script>
+</body>
+</html>
