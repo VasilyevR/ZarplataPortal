@@ -32,10 +32,10 @@ import java.util.*;
 @RequiredArgsConstructor
 public class FundsReceiptService {
 
-    private static final String PAID_AMOUNT_COLUMN_NAME = "Оплаченная сумма";
-    private static final String PAYMENT_DATE_COLUMN_NAME = "Дата оплаты клиентом";
-    private static final String CLIENT_NAME_COLUMN_NAME = "Клиент";
-    private static final String ORDER_DATE_COLUMN_NAME = "Дата заказа";
+    private static final String PAID_AMOUNT_COLUMN_NAME = "Сумма заказа";
+    private static final String PAYMENT_DATE_COLUMN_NAME = "Дата прихода";
+    private static final String CLIENT_NAME_COLUMN_NAME = "Название фирмы";
+    private static final String ORDER_DATE_COLUMN_NAME = "Дата отгрузки";
     private static final String EXCEL_EXTENSION = ".xlsx";
 
     @Value("${app.share.folder.path}")
