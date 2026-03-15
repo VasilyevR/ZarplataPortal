@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -252,7 +253,8 @@ class FundsReceiptServiceTest {
         BankStatementSaveRequestDTO request = new BankStatementSaveRequestDTO();
         request.setFileName(fileName);
         request.setRowNumber(1);
-        request.setDate(LocalDate.now());
+        LocalDate dateToSave = LocalDate.now();
+        request.setDate(dateToSave);
 
         // When
         fundsReceiptService.save(request);
@@ -263,11 +265,9 @@ class FundsReceiptServiceTest {
             Row row = sheet.getRow(1);
             Cell cell = row.getCell(1);
             assertNotNull(cell);
-            assertEquals(CellType.NUMERIC, cell.getCellType());
-            assertTrue(DateUtil.isCellDateFormatted(cell));
-            // Check if date is today (ignoring time)
-            LocalDate cellDate = cell.getDateCellValue().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
-            assertEquals(LocalDate.now(), cellDate);
+            assertEquals(CellType.STRING, cell.getCellType());
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+            assertEquals(dateToSave.format(formatter), cell.getStringCellValue());
         }
     }
 

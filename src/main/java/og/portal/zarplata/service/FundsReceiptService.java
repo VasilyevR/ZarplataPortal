@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
@@ -217,18 +218,9 @@ public class FundsReceiptService {
                 cell = row.createCell(paymentDateColIndex);
             }
             
-            cell.setCellValue(request.getDate());
-            
-            CellStyle oldStyle = cell.getCellStyle();
-            CellStyle newStyle = workbook.createCellStyle();
-            if (oldStyle != null) {
-                newStyle.cloneStyleFrom(oldStyle);
-            }
-            
-            CreationHelper createHelper = workbook.getCreationHelper();
-            String excelFormat = appDateFormat.replace("MM", "mm");
-            newStyle.setDataFormat(createHelper.createDataFormat().getFormat(excelFormat));
-            cell.setCellStyle(newStyle);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(appDateFormat);
+            String formattedDate = request.getDate() != null ? request.getDate().format(formatter) : "";
+            cell.setCellValue(formattedDate);
 
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 workbook.write(fos);
