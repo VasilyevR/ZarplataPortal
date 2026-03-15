@@ -24,7 +24,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.*;
 
 @Slf4j
@@ -43,6 +42,9 @@ public class FundsReceiptService {
 
     @Value("${app.salary.folder.path}")
     private String salaryFolderPath;
+    
+    @Value("${app.date.format}")
+    private String appDateFormat;
 
     private final BankStatementSettingRepository bankStatementSettingRepository;
     private final SalaryParseSettingRepository salaryParseSettingRepository;
@@ -210,13 +212,23 @@ public class FundsReceiptService {
                 row = sheet.createRow(request.getRowNumber());
             }
 
-            Cell cell = row.createCell(paymentDateColIndex);
+            Cell cell = row.getCell(paymentDateColIndex);
+            if (cell == null) {
+                cell = row.createCell(paymentDateColIndex);
+            }
+            
             cell.setCellValue(request.getDate());
             
-            CellStyle cellStyle = workbook.createCellStyle();
+            CellStyle oldStyle = cell.getCellStyle();
+            CellStyle newStyle = workbook.createCellStyle();
+            if (oldStyle != null) {
+                newStyle.cloneStyleFrom(oldStyle);
+            }
+            
             CreationHelper createHelper = workbook.getCreationHelper();
-            cellStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd.mm.yyyy"));
-            cell.setCellStyle(cellStyle);
+            String excelFormat = appDateFormat.replace("MM", "mm");
+            newStyle.setDataFormat(createHelper.createDataFormat().getFormat(excelFormat));
+            cell.setCellStyle(newStyle);
 
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 workbook.write(fos);

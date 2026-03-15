@@ -65,6 +65,7 @@ class FundsReceiptServiceTest {
         salaryDir.mkdirs();
         ReflectionTestUtils.setField(fundsReceiptService, "shareFolderPath", tempDir.toString());
         ReflectionTestUtils.setField(fundsReceiptService, "salaryFolderPath", "/salary");
+        ReflectionTestUtils.setField(fundsReceiptService, "appDateFormat", "dd.MM.yyyy");
     }
 
     @Test
@@ -127,19 +128,19 @@ class FundsReceiptServiceTest {
         when(salaryParseSettingRepository.findAll()).thenReturn(Collections.singletonList(parseSetting));
 
         SalaryColumnMapping paidAmountMapping = new SalaryColumnMapping();
-        paidAmountMapping.setColumnName("Оплаченная сумма");
+        paidAmountMapping.setColumnName("Сумма заказа");
         paidAmountMapping.setExcelColIndex(0);
 
         SalaryColumnMapping paymentDateMapping = new SalaryColumnMapping();
-        paymentDateMapping.setColumnName("Дата оплаты клиентом");
+        paymentDateMapping.setColumnName("Дата прихода");
         paymentDateMapping.setExcelColIndex(1);
 
         SalaryColumnMapping clientNameMapping = new SalaryColumnMapping();
-        clientNameMapping.setColumnName("Клиент");
+        clientNameMapping.setColumnName("Название фирмы");
         clientNameMapping.setExcelColIndex(2);
 
         SalaryColumnMapping orderDateMapping = new SalaryColumnMapping();
-        orderDateMapping.setColumnName("Дата заказа");
+        orderDateMapping.setColumnName("Дата");
         orderDateMapping.setExcelColIndex(3);
 
         when(salaryColumnMappingRepository.findAll()).thenReturn(Arrays.asList(
@@ -198,19 +199,19 @@ class FundsReceiptServiceTest {
         when(salaryParseSettingRepository.findAll()).thenReturn(Collections.singletonList(parseSetting));
 
         SalaryColumnMapping paidAmountMapping = new SalaryColumnMapping();
-        paidAmountMapping.setColumnName("Оплаченная сумма");
+        paidAmountMapping.setColumnName("Сумма заказа");
         paidAmountMapping.setExcelColIndex(0);
 
         SalaryColumnMapping paymentDateMapping = new SalaryColumnMapping();
-        paymentDateMapping.setColumnName("Дата оплаты клиентом");
+        paymentDateMapping.setColumnName("Дата прихода");
         paymentDateMapping.setExcelColIndex(1);
 
         SalaryColumnMapping clientNameMapping = new SalaryColumnMapping();
-        clientNameMapping.setColumnName("Клиент");
+        clientNameMapping.setColumnName("Название фирмы");
         clientNameMapping.setExcelColIndex(2);
 
         SalaryColumnMapping orderDateMapping = new SalaryColumnMapping();
-        orderDateMapping.setColumnName("Дата заказа");
+        orderDateMapping.setColumnName("Дата");
         orderDateMapping.setExcelColIndex(3);
 
         when(salaryColumnMappingRepository.findAll()).thenReturn(Arrays.asList(
@@ -243,7 +244,7 @@ class FundsReceiptServiceTest {
         }
 
         SalaryColumnMapping paymentDateMapping = new SalaryColumnMapping();
-        paymentDateMapping.setColumnName("Дата оплаты клиентом");
+        paymentDateMapping.setColumnName("Дата прихода");
         paymentDateMapping.setExcelColIndex(1);
 
         when(salaryColumnMappingRepository.findAll()).thenReturn(Collections.singletonList(paymentDateMapping));
