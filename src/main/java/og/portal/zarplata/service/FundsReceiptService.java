@@ -77,8 +77,10 @@ public class FundsReceiptService {
                 BigDecimal amount = ExcelHelperService.getCellBigDecimalValue(row.getCell(bankSetting.getAmountColIndex()));
                 if (amount == null) continue;
 
-                LocalDate date = ExcelHelperService.getCellDateValue(row.getCell(bankSetting.getDateColIndex()));
-                if (date == null) continue;
+                String dateString = ExcelHelperService.getCellStringValue(row.getCell(bankSetting.getDateColIndex()));
+                if (dateString == null) continue;
+
+                LocalDate date = LocalDate.parse(dateString,  bankFormatter);
 
                 String clientName = ExcelHelperService.getCellStringValue(row.getCell(bankSetting.getClientNameColIndex()));
 
