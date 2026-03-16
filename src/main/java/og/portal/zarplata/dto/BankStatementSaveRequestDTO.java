@@ -1,11 +1,13 @@
 package og.portal.zarplata.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import java.time.LocalDate;
 
 @Data
 public class BankStatementSaveRequestDTO {
     private String fileName;
     private int rowNumber;
-    private LocalDate date;
+    
+    @NotBlank
+    private String date;
 }

@@ -2,12 +2,11 @@ package og.portal.zarplata.dto;
 
 import lombok.Data;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 @Data
 public class BankStatementSearchResultDTO {
-    private LocalDate date;
+    private String date;
     private String clientName;
     private BigDecimal amount;
     private String managerLogin;
@@ -15,5 +14,5 @@ public class BankStatementSearchResultDTO {
     private int rowNumber;
     private boolean found;
     private List<String> possibleClients;
-    private LocalDate orderDate;
+    private String orderDate;
 }

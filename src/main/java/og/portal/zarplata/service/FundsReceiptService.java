@@ -61,6 +61,7 @@ public class FundsReceiptService {
                 });
 
         List<BankStatementSearchResultDTO> results = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(appDateFormat);
 
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -76,13 +77,15 @@ public class FundsReceiptService {
                 if (amount == null) continue;
 
                 LocalDate date = ExcelHelperService.getCellDateValue(row.getCell(bankSetting.getDateColIndex()));
+                if (date == null) continue;
+
                 String clientName = ExcelHelperService.getCellStringValue(row.getCell(bankSetting.getClientNameColIndex()));
 
-                List<BankStatementSearchResultDTO> matches = findMatchesInSalaryFiles(amount, date, clientName);
+                List<BankStatementSearchResultDTO> matches = findMatchesInSalaryFiles(amount, date, clientName, formatter);
                 if (matches.isEmpty()) {
                     BankStatementSearchResultDTO notFound = new BankStatementSearchResultDTO();
                     notFound.setAmount(amount);
-                    notFound.setDate(date);
+                    notFound.setDate(date.format(formatter));
                     notFound.setClientName(clientName);
                     notFound.setFound(false);
                     results.add(notFound);
@@ -95,7 +98,7 @@ public class FundsReceiptService {
         return results;
     }
 
-    private List<BankStatementSearchResultDTO> findMatchesInSalaryFiles(BigDecimal amount, LocalDate date, String clientName) {
+    private List<BankStatementSearchResultDTO> findMatchesInSalaryFiles(BigDecimal amount, LocalDate date, String clientName, DateTimeFormatter formatter) {
         List<BankStatementSearchResultDTO> matches = new ArrayList<>();
         List<UserDTO> users = userService.getAllUsersSortedByLogin();
 
@@ -128,9 +131,9 @@ public class FundsReceiptService {
              }
         }
         
-        if(paidAmountColIndex == -1 || paymentDateColIndex == -1 || clientNameColIndex == -1) {
-            log.warn("Column mappings not found: Paid Amount={}, Payment Date={}, Client Name={}", 
-                    paidAmountColIndex, paymentDateColIndex, clientNameColIndex);
+        if(paidAmountColIndex == -1 || paymentDateColIndex == -1 || clientNameColIndex == -1 || orderDateColIndex == -1) {
+            log.warn("Column mappings not found: Paid Amount={}, Payment Date={}, Client Name={}, Order date={}",
+                    paidAmountColIndex, paymentDateColIndex, clientNameColIndex, orderDateColIndex);
             return matches;
         }
 
@@ -149,25 +152,28 @@ public class FundsReceiptService {
                     BigDecimal paidAmount = ExcelHelperService.getCellBigDecimalValue(row.getCell(paidAmountColIndex));
                     if (paidAmount != null && paidAmount.compareTo(amount) == 0) {
                         Cell paymentDateCell = row.getCell(paymentDateColIndex);
-                        if (paymentDateCell == null || paymentDateCell.getCellType() == CellType.BLANK) {
-                            
-                            LocalDate orderDate = null;
-                            if (orderDateColIndex != -1) {
-                                orderDate = ExcelHelperService.getCellDateValue(row.getCell(orderDateColIndex));
-                                if (orderDate != null && orderDate.isBefore(LocalDate.now().minusMonths(3))) {
-                                    continue; 
-                                }
+                        
+                        boolean isCellEmpty = paymentDateCell == null ||
+                                              paymentDateCell.getCellType() == CellType.BLANK ||
+                                              (paymentDateCell.getCellType() == CellType.STRING && paymentDateCell.getStringCellValue().trim().isEmpty());
+                                              
+                        if (isCellEmpty) {
+                            LocalDate orderDate = ExcelHelperService.getCellDateValue(row.getCell(orderDateColIndex));
+                            if (orderDate != null && orderDate.isBefore(LocalDate.now().minusMonths(3))) {
+                                continue;
                             }
-                            
+
                             BankStatementSearchResultDTO match = new BankStatementSearchResultDTO();
                             match.setAmount(amount);
-                            match.setDate(date);
+                            match.setDate(date.format(formatter));
                             match.setClientName(clientName);
                             match.setManagerLogin(user.getLogin());
                             match.setFileName(file.getName());
                             match.setRowNumber(i);
                             match.setFound(true);
-                            match.setOrderDate(orderDate);
+                            if (orderDate != null) {
+                                match.setOrderDate(orderDate.format(formatter));
+                            }
                             
                             String salaryClientName = ExcelHelperService.getCellStringValue(row.getCell(clientNameColIndex));
                             match.setPossibleClients(Collections.singletonList(salaryClientName));
@@ -218,9 +224,7 @@ public class FundsReceiptService {
                 cell = row.createCell(paymentDateColIndex);
             }
             
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(appDateFormat);
-            String formattedDate = request.getDate() != null ? request.getDate().format(formatter) : "";
-            cell.setCellValue(formattedDate);
+            cell.setCellValue(request.getDate());
 
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 workbook.write(fos);

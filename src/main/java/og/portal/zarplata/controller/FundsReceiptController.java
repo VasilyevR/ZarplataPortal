@@ -1,5 +1,6 @@
 package og.portal.zarplata.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import og.portal.zarplata.dto.BankStatementSaveRequestDTO;
 import og.portal.zarplata.dto.BankStatementSearchResultDTO;
@@ -54,7 +55,7 @@ public class FundsReceiptController {
     @PostMapping("/save")
     @ResponseBody
     @PreAuthorize("hasRole('FUNDS_RECEIVER')")
-    public ResponseEntity<Void> save(@RequestBody BankStatementSaveRequestDTO request) {
+    public ResponseEntity<Void> save(@Valid @RequestBody BankStatementSaveRequestDTO request) {
         try {
             fundsReceiptService.save(request);
             return ResponseEntity.ok().build();
