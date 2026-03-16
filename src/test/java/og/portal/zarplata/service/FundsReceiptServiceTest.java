@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class FundsReceiptServiceTest {
 
-    public static final String DATE_FORMAT = "dd.MM.yyyy";
+    public static final String DATE_FORMAT = "dd.MM.yy.";
     @Mock
     private BankStatementSettingRepository bankStatementSettingRepository;
 
@@ -89,10 +89,7 @@ class FundsReceiptServiceTest {
         Row bankRow = bankSheet.createRow(1);
         bankRow.createCell(0).setCellValue(100.0);
         Cell dateCell = bankRow.createCell(1);
-        dateCell.setCellValue(LocalDate.now());
-        CellStyle bankDateStyle = bankWorkbook.createCellStyle();
-        bankDateStyle.setDataFormat(bankWorkbook.createDataFormat().getFormat(DATE_FORMAT));
-        dateCell.setCellStyle(bankDateStyle);
+        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT)));
         bankRow.createCell(2).setCellValue("Client A");
 
         File bankFile = File.createTempFile("bank", ".xlsx");
@@ -112,11 +109,7 @@ class FundsReceiptServiceTest {
         salaryRow.createCell(1); // Payment Date (empty)
         salaryRow.createCell(2).setCellValue("Client A"); // Client Name
         Cell orderDateCell = salaryRow.createCell(3); // Order Date
-        orderDateCell.setCellValue(LocalDate.now());
-        
-        CellStyle salaryDateStyle = salaryWorkbook.createCellStyle();
-        salaryDateStyle.setDataFormat(salaryWorkbook.createDataFormat().getFormat(DATE_FORMAT));
-        orderDateCell.setCellStyle(salaryDateStyle);
+        orderDateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT)));
 
         try (FileOutputStream fos = new FileOutputStream(salaryFile)) {
             salaryWorkbook.write(fos);
@@ -179,10 +172,7 @@ class FundsReceiptServiceTest {
         Row bankRow = bankSheet.createRow(1);
         bankRow.createCell(0).setCellValue(100.0);
         Cell dateCell = bankRow.createCell(1);
-        dateCell.setCellValue(LocalDate.now());
-        CellStyle dateStyle = bankWorkbook.createCellStyle();
-        dateStyle.setDataFormat(bankWorkbook.createDataFormat().getFormat(DATE_FORMAT));
-        dateCell.setCellStyle(dateStyle);
+        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT)));
         bankRow.createCell(2).setCellValue("Client A");
 
         File bankFile = File.createTempFile("bank", ".xlsx");
