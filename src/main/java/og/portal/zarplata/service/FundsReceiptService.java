@@ -99,6 +99,7 @@ public class FundsReceiptService {
     }
 
     private List<BankStatementSearchResultDTO> findMatchesInSalaryFiles(BigDecimal amount, LocalDate date, String clientName, DateTimeFormatter formatter) {
+        log.debug("Searching for matches: amount={}, date={}, client={}", amount, date, clientName);
         List<BankStatementSearchResultDTO> matches = new ArrayList<>();
         List<UserDTO> users = userService.getAllUsersSortedByLogin();
 
@@ -140,6 +141,7 @@ public class FundsReceiptService {
         for (UserDTO user : users) {
             File file = new File(shareFolderPath + salaryFolderPath, user.getLogin() + EXCEL_EXTENSION);
             if (!file.exists()) {
+                log.trace("Skipping user {}: file {} not found", user.getLogin(), file.getPath());
                 continue;
             }
 
@@ -160,6 +162,7 @@ public class FundsReceiptService {
                         if (isCellEmpty) {
                             LocalDate orderDate = ExcelHelperService.getCellDateValue(row.getCell(orderDateColIndex));
                             if (orderDate != null && orderDate.isBefore(LocalDate.now().minusMonths(3))) {
+                                log.debug("Found row match for amount but skipped due to old order date: {} in file {}", orderDate, file.getName());
                                 continue;
                             }
 
@@ -178,7 +181,10 @@ public class FundsReceiptService {
                             String salaryClientName = ExcelHelperService.getCellStringValue(row.getCell(clientNameColIndex));
                             match.setPossibleClients(Collections.singletonList(salaryClientName));
                             
+                            log.info("Match found! File: {}, Row: {}, Amount: {}", file.getName(), i, paidAmount);
                             matches.add(match);
+                        } else {
+                            log.debug("Found row match ({}) but skipped because Payment Date is already filled in file {} row {}", paidAmount, file.getName(), i);
                         }
                     }
                 }
