@@ -90,7 +90,10 @@ class FundsReceiptServiceTest {
         Row bankRow = bankSheet.createRow(1);
         bankRow.createCell(0).setCellValue(100.0);
         Cell dateCell = bankRow.createCell(1);
-        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(bankSetting.getDateFormat())));
+        dateCell.setCellValue(LocalDate.now());
+        CellStyle bankDateStyle = bankWorkbook.createCellStyle();
+        bankDateStyle.setDataFormat(bankWorkbook.createDataFormat().getFormat(bankSetting.getDateFormat()));
+        dateCell.setCellStyle(bankDateStyle);
         bankRow.createCell(2).setCellValue("Client A");
 
         File bankFile = File.createTempFile("bank", ".xlsx");
@@ -174,7 +177,10 @@ class FundsReceiptServiceTest {
         Row bankRow = bankSheet.createRow(1);
         bankRow.createCell(0).setCellValue(100.0);
         Cell dateCell = bankRow.createCell(1);
-        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(bankSetting.getDateFormat())));
+        dateCell.setCellValue(LocalDate.now());
+        CellStyle bankDateStyle = bankWorkbook.createCellStyle();
+        bankDateStyle.setDataFormat(bankWorkbook.createDataFormat().getFormat(bankSetting.getDateFormat()));
+        dateCell.setCellStyle(bankDateStyle);
         bankRow.createCell(2).setCellValue("Client A");
 
         File bankFile = File.createTempFile("bank", ".xlsx");
