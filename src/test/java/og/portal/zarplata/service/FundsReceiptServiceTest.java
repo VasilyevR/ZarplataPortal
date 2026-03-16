@@ -34,13 +34,13 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FundsReceiptServiceTest {
 
-    public static final String DATE_FORMAT = "dd.MM.yy.";
+    public static final String BANK_DATE_FORMAT = "dd.MM.yyyy";
+    public static final String SALARY_DATE_FORMAT = "dd.MM.yy.";
     @Mock
     private BankStatementSettingRepository bankStatementSettingRepository;
 
@@ -67,7 +67,7 @@ class FundsReceiptServiceTest {
         salaryDir.mkdirs();
         ReflectionTestUtils.setField(fundsReceiptService, "shareFolderPath", tempDir.toString());
         ReflectionTestUtils.setField(fundsReceiptService, "salaryFolderPath", "/salary");
-        ReflectionTestUtils.setField(fundsReceiptService, "appDateFormat", DATE_FORMAT);
+        ReflectionTestUtils.setField(fundsReceiptService, "appDateFormat", SALARY_DATE_FORMAT);
     }
 
     @Test
@@ -80,6 +80,7 @@ class FundsReceiptServiceTest {
         bankSetting.setAmountColIndex(0);
         bankSetting.setDateColIndex(1);
         bankSetting.setClientNameColIndex(2);
+        bankSetting.setDateFormat(BANK_DATE_FORMAT);
 
         when(bankStatementSettingRepository.findByBankName(bankName)).thenReturn(Optional.of(bankSetting));
 
@@ -89,7 +90,7 @@ class FundsReceiptServiceTest {
         Row bankRow = bankSheet.createRow(1);
         bankRow.createCell(0).setCellValue(100.0);
         Cell dateCell = bankRow.createCell(1);
-        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT)));
+        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(bankSetting.getDateFormat())));
         bankRow.createCell(2).setCellValue("Client A");
 
         File bankFile = File.createTempFile("bank", ".xlsx");
@@ -109,7 +110,7 @@ class FundsReceiptServiceTest {
         salaryRow.createCell(1); // Payment Date (empty)
         salaryRow.createCell(2).setCellValue("Client A"); // Client Name
         Cell orderDateCell = salaryRow.createCell(3); // Order Date
-        orderDateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT)));
+        orderDateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT)));
 
         try (FileOutputStream fos = new FileOutputStream(salaryFile)) {
             salaryWorkbook.write(fos);
@@ -163,6 +164,7 @@ class FundsReceiptServiceTest {
         bankSetting.setAmountColIndex(0);
         bankSetting.setDateColIndex(1);
         bankSetting.setClientNameColIndex(2);
+        bankSetting.setDateFormat(BANK_DATE_FORMAT);
 
         when(bankStatementSettingRepository.findByBankName(bankName)).thenReturn(Optional.of(bankSetting));
 
@@ -172,7 +174,7 @@ class FundsReceiptServiceTest {
         Row bankRow = bankSheet.createRow(1);
         bankRow.createCell(0).setCellValue(100.0);
         Cell dateCell = bankRow.createCell(1);
-        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT)));
+        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(bankSetting.getDateFormat())));
         bankRow.createCell(2).setCellValue("Client A");
 
         File bankFile = File.createTempFile("bank", ".xlsx");
@@ -244,7 +246,7 @@ class FundsReceiptServiceTest {
         BankStatementSaveRequestDTO request = new BankStatementSaveRequestDTO();
         request.setFileName(fileName);
         request.setRowNumber(1);
-        String dateToSave = LocalDate.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT));
+        String dateToSave = LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT));
         request.setDate(dateToSave);
 
         // When
@@ -266,7 +268,7 @@ class FundsReceiptServiceTest {
         BankStatementSaveRequestDTO request = new BankStatementSaveRequestDTO();
         request.setFileName("NonExistent.xlsx");
         request.setRowNumber(1);
-        request.setDate(LocalDate.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT)));
+        request.setDate(LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT)));
 
         assertThrows(IllegalArgumentException.class, () -> fundsReceiptService.save(request));
     }

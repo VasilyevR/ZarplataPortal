@@ -62,6 +62,7 @@ public class FundsReceiptService {
 
         List<BankStatementSearchResultDTO> results = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(appDateFormat);
+        DateTimeFormatter bankFormatter = DateTimeFormatter.ofPattern(bankSetting.getDateFormat());
 
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -79,7 +80,7 @@ public class FundsReceiptService {
                 String dateString = ExcelHelperService.getCellStringValue(row.getCell(bankSetting.getDateColIndex()));
                 if (dateString == null) continue;
 
-                LocalDate date = LocalDate.parse(dateString,  formatter);
+                LocalDate date = LocalDate.parse(dateString,  bankFormatter);
 
                 String clientName = ExcelHelperService.getCellStringValue(row.getCell(bankSetting.getClientNameColIndex()));
 

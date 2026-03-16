@@ -20,6 +20,9 @@ public class BankStatementSetting {
     @Column(name = "bank_name", nullable = false, unique = true)
     private String bankName;
 
+    @Column(name = "date_format", nullable = false)
+    private String dateFormat;
+
     @Column(name = "start_row", nullable = false)
     private int startRow;
 
