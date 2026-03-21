@@ -172,9 +172,13 @@ public class FundsReceiptService {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                LocalDate orderDate = ExcelHelperService.getCellDateValue(row.getCell(finalOrderDateColIndex));
-                if (orderDate != null && orderDate.isBefore(LocalDate.now().minusMonths(3))) {
-                    log.debug("Skipped due to old order date: {} in file {}", orderDate, file.getName());
+                LocalDate orderDate = Optional.ofNullable(ExcelHelperService.getCellStringValue(row.getCell(finalOrderDateColIndex)))
+                        .filter(str -> !str.isBlank())
+                        .map(str -> LocalDate.parse(str, formatter))
+                        .orElse(null);
+
+                if (isOrderTooOld(orderDate)) {
+                    log.debug("Skipped due to old order date {} in file {}", orderDate, file.getName());
                     continue;
                 }
 
@@ -254,5 +258,11 @@ public class FundsReceiptService {
             }
         }
         log.info("Successfully saved payment date.");
+    }
+
+    private boolean isOrderTooOld(LocalDate orderDate) {
+        return Optional.ofNullable(orderDate)
+                .map(date -> date.isBefore(LocalDate.now().minusMonths(3)))
+                .orElse(false);
     }
 }
