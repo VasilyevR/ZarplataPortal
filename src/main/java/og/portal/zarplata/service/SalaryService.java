@@ -175,8 +175,8 @@ public class SalaryService {
 
     private boolean isZeroCurrency(String value) {
         if (value == null || value.isEmpty()) return true;
-        String clean = value.replaceAll("[^\\d.,]", "").replace(",", ".");
-        if (clean.isEmpty()) return true;
+        String clean = value.replaceAll("[^\\d.,\\-]", "").replace(",", ".");
+        if (clean.isEmpty() || clean.equals("-")) return true;
         try {
             return new BigDecimal(clean).compareTo(BigDecimal.ZERO) == 0;
         } catch (NumberFormatException e) {
@@ -186,8 +186,8 @@ public class SalaryService {
 
     private void updateTotalAmount(SalaryMonthDTO currentMonth, String cellValue) {
         try {
-            String cleanValue = cellValue.replaceAll("[^\\d.,]", "").replace(",", ".");
-            if (!cleanValue.isEmpty()) {
+            String cleanValue = cellValue.replaceAll("[^\\d.,\\-]", "").replace(",", ".");
+            if (!cleanValue.isEmpty() && !cleanValue.equals("-")) {
                 currentMonth.setTotalAmount(currentMonth.getTotalAmount().add(new BigDecimal(cleanValue)));
             }
         } catch (Exception e) {
