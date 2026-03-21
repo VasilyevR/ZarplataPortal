@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -104,12 +105,11 @@ public class FundsReceiptService {
 
     private List<BankStatementSearchResultDTO> findMatchesInSalaryFiles(BigDecimal amount, LocalDate date, String clientName, DateTimeFormatter formatter) {
         log.debug("Searching for matches: amount={}, date={}, client={}", amount, date, clientName);
-        List<BankStatementSearchResultDTO> matches = new ArrayList<>();
         List<UserDTO> users = userService.getAllUsersSortedByLogin();
 
         if (users.isEmpty()) {
             log.warn("No users found.");
-            return matches;
+            return new ArrayList<>();
         }
 
         SalaryParseSetting parseSetting = salaryParseSettingRepository.findAll().stream().findFirst()
@@ -139,61 +139,77 @@ public class FundsReceiptService {
         if(paidAmountColIndex == -1 || paymentDateColIndex == -1 || clientNameColIndex == -1 || orderDateColIndex == -1) {
             log.warn("Column mappings not found: Paid Amount={}, Payment Date={}, Client Name={}, Order date={}",
                     paidAmountColIndex, paymentDateColIndex, clientNameColIndex, orderDateColIndex);
-            return matches;
+            return new ArrayList<>();
         }
 
-        for (UserDTO user : users) {
-            File file = new File(shareFolderPath + salaryFolderPath, user.getLogin() + EXCEL_EXTENSION);
-            if (!file.exists()) {
-                log.trace("Skipping user {}: file {} not found", user.getLogin(), file.getPath());
-                continue;
-            }
+        final int finalPaidAmountColIndex = paidAmountColIndex;
+        final int finalPaymentDateColIndex = paymentDateColIndex;
+        final int finalClientNameColIndex = clientNameColIndex;
+        final int finalOrderDateColIndex = orderDateColIndex;
 
-            try (Workbook workbook = new XSSFWorkbook(new FileInputStream(file))) {
-                Sheet sheet = workbook.getSheetAt(0);
-                for (int i = parseSetting.getStartRow(); i <= sheet.getLastRowNum(); i++) {
-                    Row row = sheet.getRow(i);
-                    if (row == null) continue;
+        return users.parallelStream()
+                .flatMap(user -> findMatchesForManager(
+                        user.getLogin(), amount, date, clientName, formatter,
+                        parseSetting, finalOrderDateColIndex, finalPaidAmountColIndex,
+                        finalPaymentDateColIndex, finalClientNameColIndex
+                ).stream())
+                .collect(Collectors.toList());
+    }
 
-                    LocalDate orderDate = ExcelHelperService.getCellDateValue(row.getCell(orderDateColIndex));
-                    if (orderDate != null && orderDate.isBefore(LocalDate.now().minusMonths(3))) {
-                        log.debug("Skipped due to old order date: {} in file {}", orderDate, file.getName());
-                        continue;
-                    }
+    public List<BankStatementSearchResultDTO> findMatchesForManager(String login, BigDecimal amount, LocalDate date, String clientName, DateTimeFormatter formatter,
+                                       SalaryParseSetting parseSetting, int finalOrderDateColIndex, int finalPaidAmountColIndex,
+                                       int finalPaymentDateColIndex, int finalClientNameColIndex) {
+        List<BankStatementSearchResultDTO> managerMatches = new ArrayList<>();
+        File file = new File(shareFolderPath + salaryFolderPath, login + EXCEL_EXTENSION);
+        if (!file.exists()) {
+            log.trace("Skipping user {}: file {} not found", login, file.getPath());
+            return managerMatches;
+        }
 
-                    BigDecimal paidAmount = ExcelHelperService.getCellBigDecimalValue(row.getCell(paidAmountColIndex));
-                    if (paidAmount != null && paidAmount.compareTo(amount) == 0) {
-                        Cell paymentDateCell = row.getCell(paymentDateColIndex);
-                        
-                        boolean isCellEmpty = paymentDateCell == null ||
-                                              paymentDateCell.getCellType() == CellType.BLANK ||
-                                              (paymentDateCell.getCellType() == CellType.STRING && paymentDateCell.getStringCellValue().trim().isEmpty());
+        try (Workbook workbook = new XSSFWorkbook(new FileInputStream(file))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            for (int i = parseSetting.getStartRow(); i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
 
-                        BankStatementSearchResultDTO match = new BankStatementSearchResultDTO();
-                        match.setAmount(amount);
-                        match.setDate(date.format(formatter));
-                        match.setClientName(clientName);
-                        match.setManagerLogin(user.getLogin());
-                        match.setFileName(file.getName());
-                        match.setRowNumber(i);
-                        match.setFound(true);
-                        match.setProcessed(!isCellEmpty);
-                        if (orderDate != null) {
-                            match.setOrderDate(orderDate.format(formatter));
-                        }
-                        
-                        String salaryClientName = ExcelHelperService.getCellStringValue(row.getCell(clientNameColIndex));
-                        match.setPossibleClients(Collections.singletonList(salaryClientName));
-                        
-                        log.info("Match found! File: {}, Row: {}, Amount: {}, Processed: {}", file.getName(), i, paidAmount, !isCellEmpty);
-                        matches.add(match);
-                    }
+                LocalDate orderDate = ExcelHelperService.getCellDateValue(row.getCell(finalOrderDateColIndex));
+                if (orderDate != null && orderDate.isBefore(LocalDate.now().minusMonths(3))) {
+                    log.debug("Skipped due to old order date: {} in file {}", orderDate, file.getName());
+                    continue;
                 }
-            } catch (IOException e) {
-                log.error("Error reading file: {}", file.getName(), e);
+
+                BigDecimal paidAmount = ExcelHelperService.getCellBigDecimalValue(row.getCell(finalPaidAmountColIndex));
+                if (paidAmount != null && paidAmount.compareTo(amount) == 0) {
+                    Cell paymentDateCell = row.getCell(finalPaymentDateColIndex);
+                    
+                    boolean isCellEmpty = paymentDateCell == null ||
+                                          paymentDateCell.getCellType() == CellType.BLANK ||
+                                          (paymentDateCell.getCellType() == CellType.STRING && paymentDateCell.getStringCellValue().trim().isEmpty());
+
+                    BankStatementSearchResultDTO match = new BankStatementSearchResultDTO();
+                    match.setAmount(amount);
+                    match.setDate(date.format(formatter));
+                    match.setClientName(clientName);
+                    match.setManagerLogin(login);
+                    match.setFileName(file.getName());
+                    match.setRowNumber(i);
+                    match.setFound(true);
+                    match.setProcessed(!isCellEmpty);
+                    if (orderDate != null) {
+                        match.setOrderDate(orderDate.format(formatter));
+                    }
+                    
+                    String salaryClientName = ExcelHelperService.getCellStringValue(row.getCell(finalClientNameColIndex));
+                    match.setPossibleClients(Collections.singletonList(salaryClientName));
+                    
+                    log.info("Match found! File: {}, Row: {}, Amount: {}, Processed: {}", file.getName(), i, paidAmount, !isCellEmpty);
+                    managerMatches.add(match);
+                }
             }
+        } catch (IOException e) {
+            log.error("Error reading file: {}", file.getName(), e);
         }
-        return matches;
+        return managerMatches;
     }
 
     public void save(BankStatementSaveRequestDTO request) throws IOException {
