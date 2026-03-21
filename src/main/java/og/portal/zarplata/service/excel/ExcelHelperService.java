@@ -7,6 +7,8 @@ import org.apache.poi.xssf.usermodel.XSSFColor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 @Slf4j
 public final class ExcelHelperService {
@@ -87,6 +89,19 @@ public final class ExcelHelperService {
             return cell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         }
         return null;
+    }
+
+    public static LocalDate getCellDateValue(Cell cell, DateTimeFormatter formatter) {
+        if (cell == null) return null;
+        if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+            return cell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        } else {
+            try {
+                return LocalDate.parse(cell.getStringCellValue(), formatter);
+            } catch (DateTimeParseException e) {
+                return null;
+            }
+        }
     }
 
     public static String getCellColorHex(Cell cell) {

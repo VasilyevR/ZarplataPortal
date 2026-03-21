@@ -172,11 +172,7 @@ public class FundsReceiptService {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                LocalDate orderDate = Optional.ofNullable(ExcelHelperService.getCellStringValue(row.getCell(finalOrderDateColIndex)))
-                        .filter(str -> !str.isBlank())
-                        .map(str -> LocalDate.parse(str, formatter))
-                        .orElse(null);
-
+                LocalDate orderDate = ExcelHelperService.getCellDateValue(row.getCell(finalOrderDateColIndex), formatter);
                 if (isOrderTooOld(orderDate)) {
                     log.debug("Skipped due to old order date {} in file {}", orderDate, file.getName());
                     continue;
