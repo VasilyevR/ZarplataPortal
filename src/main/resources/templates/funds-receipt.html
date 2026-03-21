@@ -107,9 +107,14 @@
                             row.append($('<td>').text(item.managerLogin));
 
                             var saveBtn = $('<button class="btn btn-success btn-sm">').text(msgSave);
-                            saveBtn.click(function() {
-                                saveItem(item, $(this));
-                            });
+
+                            if (item.processed) {
+                                saveBtn.text(msgSaved).prop('disabled', true);
+                            } else {
+                                saveBtn.click(function() {
+                                    saveItem(item, $(this));
+                                });
+                            }
                             row.append($('<td>').append(saveBtn));
                         } else {
                             row.append($('<td colspan="4">').text(msgNotFound));

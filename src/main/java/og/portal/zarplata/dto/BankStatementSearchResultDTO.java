@@ -13,6 +13,7 @@ public class BankStatementSearchResultDTO {
     private String fileName;
     private int rowNumber;
     private boolean found;
+    private boolean processed;
     private List<String> possibleClients;
     private String orderDate;
 }

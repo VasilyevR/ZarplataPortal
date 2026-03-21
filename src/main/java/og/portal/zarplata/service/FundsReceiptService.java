@@ -91,6 +91,7 @@ public class FundsReceiptService {
                     notFound.setDate(date.format(formatter));
                     notFound.setClientName(clientName);
                     notFound.setFound(false);
+                    notFound.setProcessed(false);
                     results.add(notFound);
                 } else {
                     results.addAll(matches);
@@ -154,6 +155,12 @@ public class FundsReceiptService {
                     Row row = sheet.getRow(i);
                     if (row == null) continue;
 
+                    LocalDate orderDate = ExcelHelperService.getCellDateValue(row.getCell(orderDateColIndex));
+                    if (orderDate != null && orderDate.isBefore(LocalDate.now().minusMonths(3))) {
+                        log.debug("Skipped due to old order date: {} in file {}", orderDate, file.getName());
+                        continue;
+                    }
+
                     BigDecimal paidAmount = ExcelHelperService.getCellBigDecimalValue(row.getCell(paidAmountColIndex));
                     if (paidAmount != null && paidAmount.compareTo(amount) == 0) {
                         Cell paymentDateCell = row.getCell(paymentDateColIndex);
@@ -161,38 +168,29 @@ public class FundsReceiptService {
                         boolean isCellEmpty = paymentDateCell == null ||
                                               paymentDateCell.getCellType() == CellType.BLANK ||
                                               (paymentDateCell.getCellType() == CellType.STRING && paymentDateCell.getStringCellValue().trim().isEmpty());
-                                              
-                        if (isCellEmpty) {
-                            LocalDate orderDate = ExcelHelperService.getCellDateValue(row.getCell(orderDateColIndex));
-                            if (orderDate != null && orderDate.isBefore(LocalDate.now().minusMonths(3))) {
-                                log.debug("Found row match for amount but skipped due to old order date: {} in file {}", orderDate, file.getName());
-                                continue;
-                            }
 
-                            BankStatementSearchResultDTO match = new BankStatementSearchResultDTO();
-                            match.setAmount(amount);
-                            match.setDate(date.format(formatter));
-                            match.setClientName(clientName);
-                            match.setManagerLogin(user.getLogin());
-                            match.setFileName(file.getName());
-                            match.setRowNumber(i);
-                            match.setFound(true);
-                            if (orderDate != null) {
-                                match.setOrderDate(orderDate.format(formatter));
-                            }
-                            
-                            String salaryClientName = ExcelHelperService.getCellStringValue(row.getCell(clientNameColIndex));
-                            match.setPossibleClients(Collections.singletonList(salaryClientName));
-                            
-                            log.info("Match found! File: {}, Row: {}, Amount: {}", file.getName(), i, paidAmount);
-                            matches.add(match);
-                        } else {
-                            log.debug("Found row match ({}) but skipped because Payment Date is already filled in file {} row {}", paidAmount, file.getName(), i);
+                        BankStatementSearchResultDTO match = new BankStatementSearchResultDTO();
+                        match.setAmount(amount);
+                        match.setDate(date.format(formatter));
+                        match.setClientName(clientName);
+                        match.setManagerLogin(user.getLogin());
+                        match.setFileName(file.getName());
+                        match.setRowNumber(i);
+                        match.setFound(true);
+                        match.setProcessed(!isCellEmpty);
+                        if (orderDate != null) {
+                            match.setOrderDate(orderDate.format(formatter));
                         }
+                        
+                        String salaryClientName = ExcelHelperService.getCellStringValue(row.getCell(clientNameColIndex));
+                        match.setPossibleClients(Collections.singletonList(salaryClientName));
+                        
+                        log.info("Match found! File: {}, Row: {}, Amount: {}, Processed: {}", file.getName(), i, paidAmount, !isCellEmpty);
+                        matches.add(match);
                     }
                 }
             } catch (IOException e) {
-                log.error("Error reading file: " + file.getName(), e);
+                log.error("Error reading file: {}", file.getName(), e);
             }
         }
         return matches;

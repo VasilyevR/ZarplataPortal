@@ -150,6 +150,7 @@ class FundsReceiptServiceTest {
         assertEquals(1, results.size());
         BankStatementSearchResultDTO result = results.get(0);
         assertTrue(result.isFound());
+        assertFalse(result.isProcessed());
         assertEquals(new BigDecimal("100.0"), result.getAmount());
         assertEquals("Manager1", result.getManagerLogin());
     }
@@ -219,7 +220,178 @@ class FundsReceiptServiceTest {
         assertEquals(1, results.size());
         BankStatementSearchResultDTO result = results.get(0);
         assertFalse(result.isFound());
+        assertFalse(result.isProcessed());
         assertEquals(new BigDecimal("100.0"), result.getAmount());
+    }
+
+    @Test
+    void search_ShouldReturnMatchesWithProcessedTrue_WhenAlreadyFilledInSalaryFiles() throws IOException {
+        // Given
+        String bankName = "TestBank";
+        BankStatementSetting bankSetting = new BankStatementSetting();
+        bankSetting.setBankName(bankName);
+        bankSetting.setStartRow(1);
+        bankSetting.setAmountColIndex(0);
+        bankSetting.setDateColIndex(1);
+        bankSetting.setClientNameColIndex(2);
+        bankSetting.setDateFormat(BANK_DATE_FORMAT);
+
+        when(bankStatementSettingRepository.findByBankName(bankName)).thenReturn(Optional.of(bankSetting));
+
+        // Create bank statement file
+        Workbook bankWorkbook = new XSSFWorkbook();
+        Sheet bankSheet = bankWorkbook.createSheet();
+        Row bankRow = bankSheet.createRow(1);
+        bankRow.createCell(0).setCellValue(100.0);
+        Cell dateCell = bankRow.createCell(1);
+        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(bankSetting.getDateFormat())));
+        bankRow.createCell(2).setCellValue("Client A");
+
+        File bankFile = File.createTempFile("bank", ".xlsx");
+        try (FileOutputStream fos = new FileOutputStream(bankFile)) {
+            bankWorkbook.write(fos);
+        }
+        MockMultipartFile multipartFile = new MockMultipartFile("file", "bank.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                java.nio.file.Files.readAllBytes(bankFile.toPath()));
+
+        // Create salary file
+        File salaryFile = new File(salaryDir, "Manager1.xlsx");
+        Workbook salaryWorkbook = new XSSFWorkbook();
+        Sheet salarySheet = salaryWorkbook.createSheet();
+        Row salaryRow = salarySheet.createRow(1);
+        salaryRow.createCell(0).setCellValue(100.0); // Paid Amount
+        salaryRow.createCell(1).setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT))); // Payment Date (filled)
+        salaryRow.createCell(2).setCellValue("Client A"); // Client Name
+        Cell orderDateCell = salaryRow.createCell(3); // Order Date
+        orderDateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT)));
+
+        try (FileOutputStream fos = new FileOutputStream(salaryFile)) {
+            salaryWorkbook.write(fos);
+        }
+
+        UserDTO user = UserDTO.builder().login("Manager1").build();
+        when(userService.getAllUsersSortedByLogin()).thenReturn(Collections.singletonList(user));
+
+        SalaryParseSetting parseSetting = new SalaryParseSetting();
+        parseSetting.setStartRow(1);
+        when(salaryParseSettingRepository.findAll()).thenReturn(Collections.singletonList(parseSetting));
+
+        SalaryColumnMapping paidAmountMapping = new SalaryColumnMapping();
+        paidAmountMapping.setColumnName("Сумма заказа");
+        paidAmountMapping.setExcelColIndex(0);
+
+        SalaryColumnMapping paymentDateMapping = new SalaryColumnMapping();
+        paymentDateMapping.setColumnName("Дата прихода");
+        paymentDateMapping.setExcelColIndex(1);
+
+        SalaryColumnMapping clientNameMapping = new SalaryColumnMapping();
+        clientNameMapping.setColumnName("Название фирмы");
+        clientNameMapping.setExcelColIndex(2);
+
+        SalaryColumnMapping orderDateMapping = new SalaryColumnMapping();
+        orderDateMapping.setColumnName("Дата");
+        orderDateMapping.setExcelColIndex(3);
+
+        when(salaryColumnMappingRepository.findAll()).thenReturn(Arrays.asList(
+                paidAmountMapping, paymentDateMapping, clientNameMapping, orderDateMapping));
+
+        // When
+        List<BankStatementSearchResultDTO> results = fundsReceiptService.search(multipartFile, bankName);
+
+        // Then
+        assertFalse(results.isEmpty());
+        assertEquals(1, results.size());
+        BankStatementSearchResultDTO result = results.get(0);
+        assertTrue(result.isFound());
+        assertTrue(result.isProcessed());
+        assertEquals(new BigDecimal("100.0"), result.getAmount());
+    }
+
+    @Test
+    void search_ShouldReturnMatchesWithFoundFalse_WhenFoundDifferentAmount() throws IOException {
+        // Given
+        String bankName = "TestBank";
+        BankStatementSetting bankSetting = new BankStatementSetting();
+        bankSetting.setBankName(bankName);
+        bankSetting.setStartRow(1);
+        bankSetting.setAmountColIndex(0);
+        bankSetting.setDateColIndex(1);
+        bankSetting.setClientNameColIndex(2);
+        bankSetting.setDateFormat(BANK_DATE_FORMAT);
+
+        when(bankStatementSettingRepository.findByBankName(bankName)).thenReturn(Optional.of(bankSetting));
+
+        // Create bank statement file
+        Workbook bankWorkbook = new XSSFWorkbook();
+        Sheet bankSheet = bankWorkbook.createSheet();
+        Row bankRow = bankSheet.createRow(1);
+        bankRow.createCell(0).setCellValue(100.0);
+        Cell dateCell = bankRow.createCell(1);
+        dateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(bankSetting.getDateFormat())));
+        bankRow.createCell(2).setCellValue("Client A");
+
+        File bankFile = File.createTempFile("bank", ".xlsx");
+        try (FileOutputStream fos = new FileOutputStream(bankFile)) {
+            bankWorkbook.write(fos);
+        }
+        MockMultipartFile multipartFile = new MockMultipartFile("file", "bank.xlsx", 
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                java.nio.file.Files.readAllBytes(bankFile.toPath()));
+
+        // Create salary file
+        File salaryFile = new File(salaryDir, "Manager1.xlsx");
+        Workbook salaryWorkbook = new XSSFWorkbook();
+        Sheet salarySheet = salaryWorkbook.createSheet();
+        Row salaryRow = salarySheet.createRow(1);
+        salaryRow.createCell(0).setCellValue(200.0); // Paid Amount (different)
+        salaryRow.createCell(1); // Payment Date (empty)
+        salaryRow.createCell(2).setCellValue("Client A"); // Client Name
+        Cell orderDateCell = salaryRow.createCell(3); // Order Date
+        orderDateCell.setCellValue(LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT)));
+
+        try (FileOutputStream fos = new FileOutputStream(salaryFile)) {
+            salaryWorkbook.write(fos);
+        }
+
+        UserDTO user = UserDTO.builder().login("Manager1").build();
+        when(userService.getAllUsersSortedByLogin()).thenReturn(Collections.singletonList(user));
+
+        SalaryParseSetting parseSetting = new SalaryParseSetting();
+        parseSetting.setStartRow(1);
+        when(salaryParseSettingRepository.findAll()).thenReturn(Collections.singletonList(parseSetting));
+
+        SalaryColumnMapping paidAmountMapping = new SalaryColumnMapping();
+        paidAmountMapping.setColumnName("Сумма заказа");
+        paidAmountMapping.setExcelColIndex(0);
+
+        SalaryColumnMapping paymentDateMapping = new SalaryColumnMapping();
+        paymentDateMapping.setColumnName("Дата прихода");
+        paymentDateMapping.setExcelColIndex(1);
+
+        SalaryColumnMapping clientNameMapping = new SalaryColumnMapping();
+        clientNameMapping.setColumnName("Название фирмы");
+        clientNameMapping.setExcelColIndex(2);
+
+        SalaryColumnMapping orderDateMapping = new SalaryColumnMapping();
+        orderDateMapping.setColumnName("Дата");
+        orderDateMapping.setExcelColIndex(3);
+
+        when(salaryColumnMappingRepository.findAll()).thenReturn(Arrays.asList(
+                paidAmountMapping, paymentDateMapping, clientNameMapping, orderDateMapping));
+
+        // When
+        List<BankStatementSearchResultDTO> results = fundsReceiptService.search(multipartFile, bankName);
+
+        // Then
+        assertFalse(results.isEmpty());
+        // We will receive a not found item since it doesn't match and no matches were found overall
+        assertEquals(1, results.size());
+        
+        BankStatementSearchResultDTO notFound = results.get(0);
+        assertFalse(notFound.isFound());
+        assertFalse(notFound.isProcessed());
+        assertEquals(new BigDecimal("100.0"), notFound.getAmount());
     }
 
     @Test
