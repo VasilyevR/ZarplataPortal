@@ -84,6 +84,7 @@ public class FundsReceiptService {
                 LocalDate date = LocalDate.parse(dateString,  bankFormatter);
 
                 String clientName = ExcelHelperService.getCellStringValue(row.getCell(bankSetting.getClientNameColIndex()));
+                String subject = ExcelHelperService.getCellStringValue(row.getCell(bankSetting.getSubjectColIndex()));
 
                 List<BankStatementSearchResultDTO> matches = findMatchesInSalaryFiles(amount, date, clientName, formatter);
                 if (matches.isEmpty()) {
@@ -91,6 +92,7 @@ public class FundsReceiptService {
                     notFound.setAmount(amount);
                     notFound.setDate(date.format(formatter));
                     notFound.setClientName(clientName);
+                    notFound.setSubject(subject);
                     notFound.setFound(false);
                     notFound.setProcessed(false);
                     results.add(notFound);

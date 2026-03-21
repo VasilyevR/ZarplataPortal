@@ -34,4 +34,7 @@ public class BankStatementSetting {
 
     @Column(name = "client_name_col_index", nullable = false)
     private int clientNameColIndex;
+    
+    @Column(name = "subject_col_index", nullable = false)
+    private int subjectColIndex;
 }

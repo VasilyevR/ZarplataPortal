@@ -117,7 +117,8 @@
                             }
                             row.append($('<td>').append(saveBtn));
                         } else {
-                            row.append($('<td colspan="4">').text(msgNotFound));
+                            row.append($('<td>').text(msgNotFound));
+                            row.append($('<td colspan="3">').text(item.subject || ""));
                         }
 
                         tbody.append(row);

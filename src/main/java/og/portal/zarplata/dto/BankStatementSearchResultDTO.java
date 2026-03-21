@@ -16,4 +16,5 @@ public class BankStatementSearchResultDTO {
     private boolean processed;
     private List<String> possibleClients;
     private String orderDate;
+    private String subject;
 }
