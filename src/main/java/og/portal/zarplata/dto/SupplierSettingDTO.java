@@ -1,18 +1,13 @@
 package og.portal.zarplata.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class SupplierSettingDTO {
-    private Long id;
-    private String title;
-    private String colorName;
-    private String colorHex;
-    private String fileName;
+public record SupplierSettingDTO(
+        Long id,
+        String title,
+        String colorName,
+        String colorHex,
+        String fileName
+) {
 }

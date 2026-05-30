@@ -57,9 +57,9 @@ public class SalaryController {
         log.debug("SalaryController: Fetching user data for login '{}'", viewUser);
         UserDTO user = userService.getUserByLogin(viewUser);
         
-        log.debug("SalaryController: Fetching salary data for login '{}'", user.getLogin());
-        List<SalaryMonthDTO> salaryData = salaryService.getSalaryData(user.getLogin(), session);
-        log.info("SalaryController: Retrieved {} months of salary data for '{}'", salaryData.size(), user.getLogin());
+        log.debug("SalaryController: Fetching salary data for login '{}'", user.login());
+        List<SalaryMonthDTO> salaryData = salaryService.getSalaryData(user.login(), session);
+        log.info("SalaryController: Retrieved {} months of salary data for '{}'", salaryData.size(), user.login());
         
         List<SalaryColumnMappingDTO> visibleColumns = salaryMappingService.getVisibleColumns();
 

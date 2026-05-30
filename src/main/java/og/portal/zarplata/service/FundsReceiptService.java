@@ -152,7 +152,7 @@ public class FundsReceiptService {
 
         return users.parallelStream()
                 .flatMap(user -> findMatchesForManager(
-                        user.getLogin(), amount, date, clientName, formatter,
+                        user.login(), amount, date, clientName, formatter,
                         parseSetting, finalOrderDateColIndex, finalPaidAmountColIndex,
                         finalPaymentDateColIndex, finalClientNameColIndex
                 ).stream())

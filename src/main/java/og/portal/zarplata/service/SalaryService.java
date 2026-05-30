@@ -95,7 +95,7 @@ public class SalaryService {
                 if (newMonth != null) {
                     currentMonth = newMonth;
                     result.add(currentMonth);
-                    log.trace("SalaryService: Found new month block: {}", currentMonth.getMonthName());
+                    log.trace("SalaryService: Found new month block: {}", currentMonth.monthName());
                     continue;
                 }
 
@@ -105,7 +105,7 @@ public class SalaryService {
 
                 Optional<SalaryRowDTO> rowDTO = parseDataRow(row, mappings, colorMap, currentMonth);
                 if (rowDTO.isPresent()) {
-                    currentMonth.getRows().add(rowDTO.get());
+                    currentMonth.addRow(rowDTO.get());
                 }
             }
         } catch (IOException e) {
@@ -128,13 +128,13 @@ public class SalaryService {
             String monthName = matcher.group(1).toUpperCase();
             int year = Integer.parseInt(matcher.group(2));
 
-            return new SalaryMonthDTO(monthName, year, BigDecimal.ZERO, new ArrayList<>());
+            return new SalaryMonthDTO(monthName, year);
         }
         return null;
     }
 
     private Optional<SalaryRowDTO> parseDataRow(Row row, List<SalaryColumnMapping> mappings, Map<String, String> colorMap, SalaryMonthDTO currentMonth) {
-        SalaryRowDTO rowDTO = new SalaryRowDTO(new HashMap<>(), new HashMap<>());
+        SalaryRowDTO rowDTO = new SalaryRowDTO();
         boolean hasData = false;
 
         for (SalaryColumnMapping mapping : mappings) {
@@ -159,12 +159,12 @@ public class SalaryService {
                 if (mapping.isCurrency()) {
                     cellValue = DataCleaningService.formatCurrency(cellValue);
                 }
-                rowDTO.getColumnValues().put(mapping.getExcelColIndex(), cellValue);
+                rowDTO.addColumnValue(mapping.getExcelColIndex(), cellValue);
 
                 if (mapping.isUseExcelColor()) {
                     String excelColor = ExcelHelperService.getCellColorHex(cell);
                     if (excelColor != null && colorMap.containsKey(excelColor)) {
-                        rowDTO.getColumnColors().put(mapping.getExcelColIndex(), colorMap.get(excelColor));
+                        rowDTO.addColumnColor(mapping.getExcelColIndex(), colorMap.get(excelColor));
                     }
                 }
             }
@@ -188,7 +188,7 @@ public class SalaryService {
         try {
             String cleanValue = cellValue.replaceAll("[^\\d.,\\-]", "").replace(",", ".");
             if (!cleanValue.isEmpty() && !cleanValue.equals("-")) {
-                currentMonth.setTotalAmount(currentMonth.getTotalAmount().add(new BigDecimal(cleanValue)));
+                currentMonth.incrementTotalAmount(new BigDecimal(cleanValue));
             }
         } catch (Exception e) {
             log.debug("SalaryService: Failed to parse salary value from cell: {}", cellValue);
