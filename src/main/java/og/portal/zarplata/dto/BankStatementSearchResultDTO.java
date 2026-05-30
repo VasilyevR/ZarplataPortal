@@ -1,20 +1,41 @@
 package og.portal.zarplata.dto;
 
-import lombok.Data;
 import java.math.BigDecimal;
 import java.util.List;
 
-@Data
-public class BankStatementSearchResultDTO {
-    private String date;
-    private String clientName;
-    private BigDecimal amount;
-    private String managerLogin;
-    private String fileName;
-    private int rowNumber;
-    private boolean found;
-    private boolean processed;
-    private List<String> possibleClients;
-    private String orderDate;
-    private String subject;
+public record BankStatementSearchResultDTO(
+        String date,
+        String clientName,
+        BigDecimal amount,
+        String managerLogin,
+        String fileName,
+        Integer rowNumber,
+        boolean found,
+        boolean processed,
+        List<String> possibleClients,
+        String orderDate,
+        String subject
+) {
+    public BankStatementSearchResultDTO(
+            String date,
+            String clientName,
+            BigDecimal amount,
+            boolean found,
+            boolean processed,
+            String subject
+    ) {
+        this(
+                date,
+                clientName,
+                amount,
+                null,
+                null,
+                null,
+                found,
+                processed,
+                null,
+                null,
+                subject
+        );
+    }
 }

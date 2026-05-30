@@ -59,8 +59,8 @@ class PurchaseOrderServiceTest {
         assertEquals(1, result.size());
         GeneratedFileDTO fileOut = result.get(0);
         assertNotNull(fileOut);
-        assertEquals(supplierSetting.getFileName(), fileOut.getFileName());
-        Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(fileOut.getContent()));
+        assertEquals(supplierSetting.getFileName(), fileOut.fileName());
+        Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(fileOut.content()));
         assertNotNull(workbook);
         Sheet sheet = workbook.getSheetAt(0);
         Row row = sheet.getRow(0);

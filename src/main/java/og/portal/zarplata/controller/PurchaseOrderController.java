@@ -64,11 +64,11 @@ public class PurchaseOrderController {
     @PreAuthorize("@securityService.hasRole('ORDER_GENERATOR')")
     public ResponseEntity<List<String>> generateOrders(@RequestBody PurchaseOrderRequestDTO request, HttpSession session) {
         try {
-            List<GeneratedFileDTO> generatedFiles = purchaseOrderService.generatePurchaseOrders(request.getCurrentPath(), request.getFileNames());
+            List<GeneratedFileDTO> generatedFiles = purchaseOrderService.generatePurchaseOrders(request.currentPath(), request.fileNames());
             session.setAttribute(SESSION_FILES_KEY, generatedFiles);
 
             List<String> fileNames = generatedFiles.stream()
-                    .map(GeneratedFileDTO::getFileName)
+                    .map(GeneratedFileDTO::fileName)
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(fileNames);
@@ -93,11 +93,11 @@ public class PurchaseOrderController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        String encodedFileName = URLEncoder.encode(fileDTO.getFileName(), StandardCharsets.UTF_8).replace("+", "%20");
+        String encodedFileName = URLEncoder.encode(fileDTO.fileName(), StandardCharsets.UTF_8).replace("+", "%20");
         headers.setContentDispositionFormData("attachment", encodedFileName);
 
         return ResponseEntity.ok()
                 .headers(headers)
-                .body(fileDTO.getContent());
+                .body(fileDTO.content());
     }
 }

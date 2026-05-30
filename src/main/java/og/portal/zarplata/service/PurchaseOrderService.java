@@ -60,11 +60,11 @@ public class PurchaseOrderService {
         Map<SupplierSetting, Map<String, Integer>> aggregatedData = new LinkedHashMap<>();
 
         WindowsExplorerComparator comparator = new WindowsExplorerComparator();
-        inputStreams.sort((s1, s2) -> comparator.compare(s1.getName(), s2.getName()));
+        inputStreams.sort((s1, s2) -> comparator.compare(s1.name(), s2.name()));
 
         for (NamedInputStreamDTO namedStream : inputStreams) {
-            log.info("Processing file: {}", namedStream.getName());
-            try (InputStream is = namedStream.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+            log.info("Processing file: {}", namedStream.name());
+            try (InputStream is = namedStream.inputStream(); Workbook workbook = new XSSFWorkbook(is)) {
                 Sheet sheet = workbook.getSheetAt(0);
                 for (int i = parseSetting.getStartRow(); i <= sheet.getLastRowNum(); i++) {
                     Row row = sheet.getRow(i);
@@ -73,7 +73,7 @@ public class PurchaseOrderService {
                     Cell articleCell = row.getCell(parseSetting.getArticleCol());
 
                     if (isInvoiceEnded(articleCell)) {
-                        log.info("Found empty article cell at row {}, stopping processing for file {}", i + 1, namedStream.getName());
+                        log.info("Found empty article cell at row {}, stopping processing for file {}", i + 1, namedStream.name());
                         break;
                     }
 

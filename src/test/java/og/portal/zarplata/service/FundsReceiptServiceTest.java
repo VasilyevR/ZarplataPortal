@@ -150,10 +150,10 @@ class FundsReceiptServiceTest {
         assertFalse(results.isEmpty());
         assertEquals(1, results.size());
         BankStatementSearchResultDTO result = results.get(0);
-        assertTrue(result.isFound());
-        assertFalse(result.isProcessed());
-        assertEquals(new BigDecimal("100.0"), result.getAmount());
-        assertEquals("Manager1", result.getManagerLogin());
+        assertTrue(result.found());
+        assertFalse(result.processed());
+        assertEquals(new BigDecimal("100.0"), result.amount());
+        assertEquals("Manager1", result.managerLogin());
     }
 
     @Test
@@ -219,9 +219,9 @@ class FundsReceiptServiceTest {
         assertFalse(results.isEmpty());
         assertEquals(1, results.size());
         BankStatementSearchResultDTO result = results.get(0);
-        assertFalse(result.isFound());
-        assertFalse(result.isProcessed());
-        assertEquals(new BigDecimal("100.0"), result.getAmount());
+        assertFalse(result.found());
+        assertFalse(result.processed());
+        assertEquals(new BigDecimal("100.0"), result.amount());
     }
 
     @Test
@@ -301,9 +301,9 @@ class FundsReceiptServiceTest {
         assertFalse(results.isEmpty());
         assertEquals(1, results.size());
         BankStatementSearchResultDTO result = results.get(0);
-        assertTrue(result.isFound());
-        assertTrue(result.isProcessed());
-        assertEquals(new BigDecimal("100.0"), result.getAmount());
+        assertTrue(result.found());
+        assertTrue(result.processed());
+        assertEquals(new BigDecimal("100.0"), result.amount());
     }
 
     @Test
@@ -385,9 +385,9 @@ class FundsReceiptServiceTest {
         assertEquals(1, results.size());
         
         BankStatementSearchResultDTO notFound = results.get(0);
-        assertFalse(notFound.isFound());
-        assertFalse(notFound.isProcessed());
-        assertEquals(new BigDecimal("100.0"), notFound.getAmount());
+        assertFalse(notFound.found());
+        assertFalse(notFound.processed());
+        assertEquals(new BigDecimal("100.0"), notFound.amount());
     }
 
     @Test
@@ -485,11 +485,11 @@ class FundsReceiptServiceTest {
         boolean manager1Found = false;
         boolean manager2Found = false;
         for (BankStatementSearchResultDTO result : results) {
-            assertTrue(result.isFound());
-            assertFalse(result.isProcessed());
-            assertEquals(new BigDecimal("100.0"), result.getAmount());
-            if ("Manager1".equals(result.getManagerLogin())) manager1Found = true;
-            if ("Manager2".equals(result.getManagerLogin())) manager2Found = true;
+            assertTrue(result.found());
+            assertFalse(result.processed());
+            assertEquals(new BigDecimal("100.0"), result.amount());
+            if ("Manager1".equals(result.managerLogin())) manager1Found = true;
+            if ("Manager2".equals(result.managerLogin())) manager2Found = true;
         }
         assertTrue(manager1Found);
         assertTrue(manager2Found);
@@ -515,11 +515,8 @@ class FundsReceiptServiceTest {
 
         when(salaryColumnMappingRepository.findAll()).thenReturn(Collections.singletonList(paymentDateMapping));
 
-        BankStatementSaveRequestDTO request = new BankStatementSaveRequestDTO();
-        request.setFileName(fileName);
-        request.setRowNumber(1);
         String dateToSave = LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT));
-        request.setDate(dateToSave);
+        BankStatementSaveRequestDTO request = new BankStatementSaveRequestDTO(fileName, 1, dateToSave);
 
         // When
         fundsReceiptService.save(request);
@@ -537,10 +534,11 @@ class FundsReceiptServiceTest {
 
     @Test
     void save_ShouldThrowException_WhenFileNotFound() {
-        BankStatementSaveRequestDTO request = new BankStatementSaveRequestDTO();
-        request.setFileName("NonExistent.xlsx");
-        request.setRowNumber(1);
-        request.setDate(LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT)));
+        BankStatementSaveRequestDTO request = new BankStatementSaveRequestDTO(
+                "NonExistent.xlsx",
+                1,
+                LocalDate.now().format(DateTimeFormatter.ofPattern(SALARY_DATE_FORMAT))
+        );
 
         assertThrows(IllegalArgumentException.class, () -> fundsReceiptService.save(request));
     }

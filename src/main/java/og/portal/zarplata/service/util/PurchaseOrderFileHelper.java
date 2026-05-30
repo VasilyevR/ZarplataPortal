@@ -51,7 +51,7 @@ public final class PurchaseOrderFileHelper {
                 .sorted((f1, f2) -> {
                     if (f1.isDirectory() && !f2.isDirectory()) return -1;
                     if (!f1.isDirectory() && f2.isDirectory()) return 1;
-                    return comparator.compare(f1.getName(), f2.getName());
+                    return comparator.compare(f1.name(), f2.name());
                 })
                 .collect(Collectors.toList());
     }

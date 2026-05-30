@@ -88,13 +88,14 @@ public class FundsReceiptService {
 
                 List<BankStatementSearchResultDTO> matches = findMatchesInSalaryFiles(amount, date, clientName, formatter);
                 if (matches.isEmpty()) {
-                    BankStatementSearchResultDTO notFound = new BankStatementSearchResultDTO();
-                    notFound.setAmount(amount);
-                    notFound.setDate(date.format(formatter));
-                    notFound.setClientName(clientName);
-                    notFound.setSubject(subject);
-                    notFound.setFound(false);
-                    notFound.setProcessed(false);
+                    BankStatementSearchResultDTO notFound = new BankStatementSearchResultDTO(
+                        date.format(formatter),
+                        clientName,
+                        amount,
+                        false,
+                        false,
+                        subject
+                    );
                     results.add(notFound);
                 } else {
                     results.addAll(matches);
@@ -188,22 +189,22 @@ public class FundsReceiptService {
                                           paymentDateCell.getCellType() == CellType.BLANK ||
                                           (paymentDateCell.getCellType() == CellType.STRING && paymentDateCell.getStringCellValue().trim().isEmpty());
 
-                    BankStatementSearchResultDTO match = new BankStatementSearchResultDTO();
-                    match.setAmount(amount);
-                    match.setDate(date.format(formatter));
-                    match.setClientName(clientName);
-                    match.setManagerLogin(login);
-                    match.setFileName(file.getName());
-                    match.setRowNumber(i);
-                    match.setFound(true);
-                    match.setProcessed(!isCellEmpty);
-                    if (orderDate != null) {
-                        match.setOrderDate(orderDate.format(formatter));
-                    }
-                    
                     String salaryClientName = ExcelHelperService.getCellStringValue(row.getCell(finalClientNameColIndex));
-                    match.setPossibleClients(Collections.singletonList(salaryClientName));
-                    
+
+                    BankStatementSearchResultDTO match = new BankStatementSearchResultDTO(
+                            date.format(formatter),
+                            clientName,
+                            amount,
+                            login,
+                            file.getName(),
+                            i,
+                            true,
+                            !isCellEmpty,
+                            Collections.singletonList(salaryClientName),
+                            orderDate.format(formatter),
+                            null);
+
+
                     log.info("Match found! File: {}, Row: {}, Amount: {}, Processed: {}", file.getName(), i, paidAmount, !isCellEmpty);
                     managerMatches.add(match);
                 }
@@ -215,11 +216,11 @@ public class FundsReceiptService {
     }
 
     public void save(BankStatementSaveRequestDTO request) throws IOException {
-        log.info("Saving payment date for file: {}, row: {}", request.getFileName(), request.getRowNumber());
-        File file = new File(shareFolderPath + salaryFolderPath, request.getFileName());
+        log.info("Saving payment date for file: {}, row: {}", request.fileName(), request.rowNumber());
+        File file = new File(shareFolderPath + salaryFolderPath, request.fileName());
         if (!file.exists()) {
             log.error("File not found: {}", file.getAbsolutePath());
-            throw new IllegalArgumentException("File not found: " + request.getFileName());
+            throw new IllegalArgumentException("File not found: " + request.fileName());
         }
 
         int paymentDateColIndex = -1;
@@ -239,9 +240,9 @@ public class FundsReceiptService {
         try (FileInputStream fis = new FileInputStream(file);
              Workbook workbook = new XSSFWorkbook(fis)) {
             Sheet sheet = workbook.getSheetAt(0);
-            Row row = sheet.getRow(request.getRowNumber());
+            Row row = sheet.getRow(request.rowNumber());
             if (row == null) {
-                row = sheet.createRow(request.getRowNumber());
+                row = sheet.createRow(request.rowNumber());
             }
 
             Cell cell = row.getCell(paymentDateColIndex);
@@ -249,7 +250,7 @@ public class FundsReceiptService {
                 cell = row.createCell(paymentDateColIndex);
             }
             
-            cell.setCellValue(request.getDate());
+            cell.setCellValue(request.date());
 
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 workbook.write(fos);
