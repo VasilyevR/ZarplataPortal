@@ -27,19 +27,11 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final NegotiateSecurityFilter filter;
-    private final NegotiateSecurityFilterEntryPoint entryPoint;
-
     @Value("${waffle.exclude.urls:}")
     private List<String> excludeUrls;
 
     @Value("${security.ignoring.urls:}")
     private String[] ignoringUrls;
-
-    public SecurityConfig(NegotiateSecurityFilter filter, NegotiateSecurityFilterEntryPoint entryPoint) {
-        this.filter = filter;
-        this.entryPoint = entryPoint;
-    }
 
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
@@ -51,7 +43,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filterChain(final HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(final HttpSecurity http, NegotiateSecurityFilter filter, NegotiateSecurityFilterEntryPoint entryPoint) throws Exception {
         http
             .securityContext(securityContext -> securityContext
                 .requireExplicitSave(false)
