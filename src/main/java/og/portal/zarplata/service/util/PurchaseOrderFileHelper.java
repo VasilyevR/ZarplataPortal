@@ -25,7 +25,7 @@ public final class PurchaseOrderFileHelper {
         Path rootPath = Paths.get(rootPathStr);
         Path targetPath = rootPath.resolve(relativePath == null ? "" : relativePath).normalize();
 
-        if (!targetPath.startsWith(rootPath)) {
+        if (!targetPath.toAbsolutePath().normalize().startsWith(rootPath.toAbsolutePath().normalize())) {
             throw new IllegalArgumentException("Access denied: path is outside of the allowed directory.");
         }
 
@@ -60,7 +60,7 @@ public final class PurchaseOrderFileHelper {
         Path rootPath = Paths.get(rootPathStr);
         Path targetDir = rootPath.resolve(currentPath == null ? "" : currentPath).normalize();
 
-        if (!targetDir.startsWith(rootPath)) {
+        if (!targetDir.toAbsolutePath().normalize().startsWith(rootPath.toAbsolutePath().normalize())) {
             throw new IllegalArgumentException("Access denied: path is outside of the allowed directory.");
         }
 
