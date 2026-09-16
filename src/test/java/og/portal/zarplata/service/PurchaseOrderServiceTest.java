@@ -49,7 +49,7 @@ class PurchaseOrderServiceTest {
         streams.add(new NamedInputStreamDTO("file2.xlsx", file2InputStream));
 
         Mockito.when(invoiceParseSettingRepository.findAll())
-                .thenReturn(List.of(new InvoiceParseSetting(1L, 0, 1, 3, 7, 0)));
+                .thenReturn(List.of(new InvoiceParseSetting(1L, 0, 1, 3, 7, 0, null)));
         Mockito.when(supplierSettingRepository.findByIsDefaultTrue()).thenReturn(Optional.of(supplierSetting));
         Mockito.when(supplierSettingRepository.findAll()).thenReturn(List.of(supplierSetting));
 

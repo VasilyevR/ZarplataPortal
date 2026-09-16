@@ -84,6 +84,10 @@ public class PurchaseOrderService {
 
                     String article = getArticle(row, articleCell, parseSetting);
                     int quantity = getQuantity(row, parseSetting);
+                    if (quantity <= 0) {
+                        log.info("Row {}: Required quantity minus quantity in stock is <= 0 (quantity={}), skipping.", i + 1, quantity);
+                        continue;
+                    }
 
                     Optional<SupplierSetting> currentSupplier = getCurrentSupplier(articleCell, defaultSupplier, i, supplierByColor);
 
@@ -128,31 +132,46 @@ public class PurchaseOrderService {
     }
 
     private int getQuantity(Row row, InvoiceParseSetting parseSetting) {
-        Cell quantityCell = row.getCell(parseSetting.getQuantityCol());
-        if (quantityCell == null) return 0;
+        int requiredQuantity = getCellQuantity(row.getCell(parseSetting.getQuantityCol()));
 
-        if (quantityCell.getCellType() == CellType.NUMERIC) {
-            return (int) quantityCell.getNumericCellValue();
-        } else if (quantityCell.getCellType() == CellType.STRING) {
-            String val = DataCleaningService.getLastDigits(quantityCell.getStringCellValue());
+        int inStockQuantity = 0;
+        Integer stockCol = parseSetting.getQuantityInStockCol();
+        if (stockCol != null && stockCol >= 0) {
+            inStockQuantity = getCellQuantity(row.getCell(stockCol));
+        }
+
+        return requiredQuantity - inStockQuantity;
+    }
+
+    private int getCellQuantity(Cell cell) {
+        if (cell == null) {
+            return 0;
+        }
+
+        if (cell.getCellType() == CellType.NUMERIC) {
+            return (int) cell.getNumericCellValue();
+        } else if (cell.getCellType() == CellType.STRING) {
+            String val = DataCleaningService.getLastDigits(cell.getStringCellValue());
             if (!val.isEmpty()) {
                 try {
                     return Integer.parseInt(val);
                 } catch (NumberFormatException e) {
-                    log.warn("Failed to parse quantity from string: {}", quantityCell.getStringCellValue());
+                    log.warn("Failed to parse quantity from string: {}", cell.getStringCellValue());
                 }
             }
-        } else if (quantityCell.getCellType() == CellType.FORMULA) {
-             try {
-                 return (int) quantityCell.getNumericCellValue();
-             } catch (IllegalStateException e) {
-                 try {
-                     String val = DataCleaningService.getLastDigits(quantityCell.getStringCellValue());
-                     if (!val.isEmpty()) return Integer.parseInt(val);
-                 } catch (Exception ex) {
-                     log.warn("Failed to evaluate formula for quantity: {}", ex.getMessage());
-                 }
-             }
+        } else if (cell.getCellType() == CellType.FORMULA) {
+            try {
+                return (int) cell.getNumericCellValue();
+            } catch (IllegalStateException e) {
+                try {
+                    String val = DataCleaningService.getLastDigits(cell.getStringCellValue());
+                    if (!val.isEmpty()) {
+                        return Integer.parseInt(val);
+                    }
+                } catch (Exception ex) {
+                    log.warn("Failed to evaluate formula for quantity: {}", ex.getMessage());
+                }
+            }
         }
 
         return 0;
