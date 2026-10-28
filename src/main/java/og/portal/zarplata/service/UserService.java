@@ -20,7 +20,7 @@ public class UserService {
     public UserDTO getUserByLogin(String login) {
         return userRepository.findByLogin(login)
                 .map(userMapper::toDto)
-                .orElse(UserDTO.builder().login(login).build());
+                .orElse(new UserDTO(null, login));
     }
 
     public List<UserDTO> getAllUsersSortedByLogin() {

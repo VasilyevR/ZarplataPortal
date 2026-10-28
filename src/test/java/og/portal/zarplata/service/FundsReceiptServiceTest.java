@@ -117,7 +117,7 @@ class FundsReceiptServiceTest {
             salaryWorkbook.write(fos);
         }
 
-        UserDTO user = UserDTO.builder().login("Manager1").build();
+        UserDTO user = new UserDTO(null, "Manager1");
         when(userService.getAllUsersSortedByLogin()).thenReturn(Collections.singletonList(user));
 
         SalaryParseSetting parseSetting = new SalaryParseSetting();
@@ -186,7 +186,7 @@ class FundsReceiptServiceTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
                 java.nio.file.Files.readAllBytes(bankFile.toPath()));
 
-        UserDTO user = UserDTO.builder().login("Manager1").build();
+        UserDTO user = new UserDTO(null, "Manager1");
         when(userService.getAllUsersSortedByLogin()).thenReturn(Collections.singletonList(user));
 
         SalaryParseSetting parseSetting = new SalaryParseSetting();
@@ -268,7 +268,7 @@ class FundsReceiptServiceTest {
             salaryWorkbook.write(fos);
         }
 
-        UserDTO user = UserDTO.builder().login("Manager1").build();
+        UserDTO user = new UserDTO(null, "Manager1");
         when(userService.getAllUsersSortedByLogin()).thenReturn(Collections.singletonList(user));
 
         SalaryParseSetting parseSetting = new SalaryParseSetting();
@@ -350,7 +350,7 @@ class FundsReceiptServiceTest {
             salaryWorkbook.write(fos);
         }
 
-        UserDTO user = UserDTO.builder().login("Manager1").build();
+        UserDTO user = new UserDTO(null, "Manager1");
         when(userService.getAllUsersSortedByLogin()).thenReturn(Collections.singletonList(user));
 
         SalaryParseSetting parseSetting = new SalaryParseSetting();
@@ -447,8 +447,8 @@ class FundsReceiptServiceTest {
             salaryWorkbook2.write(fos);
         }
 
-        UserDTO user1 = UserDTO.builder().login("Manager1").build();
-        UserDTO user2 = UserDTO.builder().login("Manager2").build();
+        UserDTO user1 = new UserDTO(null, "Manager1");
+        UserDTO user2 = new UserDTO(null, "Manager2");
         when(userService.getAllUsersSortedByLogin()).thenReturn(Arrays.asList(user1, user2));
 
         SalaryParseSetting parseSetting = new SalaryParseSetting();
